@@ -1,0 +1,122 @@
+[
+  {
+    "question": "AXI4 Master 介面必須支援哪些 burst 模式？",
+    "ground_truth": "必須同時支援 INCR 和 WRAP 兩種 burst 模式，依據規則 AXI-001。",
+    "source_doc": "axi_interface_standard.md",
+    "rule_id": "AXI-001"
+  },
+  {
+    "question": "使用 AXI4-Lite 介面時，AWLEN 信號應該設定為多少？",
+    "ground_truth": "AWLEN 與 ARLEN 必須固定為 0，禁止使用任何 burst 傳輸，依據規則 AXI-002。",
+    "source_doc": "axi_interface_standard.md",
+    "rule_id": "AXI-002"
+  },
+  {
+    "question": "AXI4 Master 的最大 outstanding write transaction 數量限制是多少？",
+    "ground_truth": "不得超過 16 個，AWID 寬度不得超過 4-bit，依據規則 AXI-003。",
+    "source_doc": "axi_interface_standard.md",
+    "rule_id": "AXI-003"
+  },
+  {
+    "question": "當 Master 要對相同位址發出第二筆 write 時，必須等待什麼信號？",
+    "ground_truth": "必須等待前一筆 write 的 BRESP 回應收到後，才能發出下一筆相同位址的 write，依據規則 AXI-004。",
+    "source_doc": "axi_interface_standard.md",
+    "rule_id": "AXI-004"
+  },
+  {
+    "question": "進行 partial write 時，WSTRB 信號應該如何設定？",
+    "ground_truth": "WSTRB 必須只對 valid byte lane 設為 1，未使用的 byte lane 必須設為 0，依據規則 AXI-005。",
+    "source_doc": "axi_interface_standard.md",
+    "rule_id": "AXI-005"
+  },
+  {
+    "question": "如果一個 Spec 寫著「The master interface supports INCR burst mode only」，這違反哪條規則？",
+    "ground_truth": "違反 AXI-001，因為 AXI4 Master 必須同時支援 INCR 和 WRAP 兩種 burst 模式。",
+    "source_doc": "axi_interface_standard.md",
+    "rule_id": "AXI-001"
+  },
+  {
+    "question": "AXI-Lite 介面若支援 AWLEN=15 的 burst 傳輸，會造成什麼問題？",
+    "ground_truth": "違反 AXI4-Lite 協定規格，會導致 interconnect 行為未定義，依據規則 AXI-002。",
+    "source_doc": "axi_interface_standard.md",
+    "rule_id": "AXI-002"
+  },
+  {
+    "question": "跨時鐘域的單 bit 控制信號（如 request）必須經過幾級 synchronizer？",
+    "ground_truth": "必須經過至少兩級 D flip-flop synchronizer，且兩級 FF 必須由目的時鐘域驅動，依據規則 CLK-001。",
+    "source_doc": "clock_domain_standard.md",
+    "rule_id": "CLK-001"
+  },
+  {
+    "question": "32-bit 資料總線跨時鐘域傳輸時，可以直接用 32 個 2-stage synchronizer 嗎？",
+    "ground_truth": "不可以。多 bit 信號禁止直接使用 multi-bit synchronizer array，必須採用 Gray code、handshake protocol 或 async FIFO，依據規則 CLK-002。",
+    "source_doc": "clock_domain_standard.md",
+    "rule_id": "CLK-002"
+  },
+  {
+    "question": "Clock gating 的 enable 信號應該在時鐘的哪個相位穩定？",
+    "ground_truth": "enable 信號必須在被門控時鐘的低電位期間穩定，且必須由 ICG cell 驅動，依據規則 CLK-003。",
+    "source_doc": "clock_domain_standard.md",
+    "rule_id": "CLK-003"
+  },
+  {
+    "question": "Async reset 信號在釋放（de-assert）時需要什麼處理？",
+    "ground_truth": "reset 釋放必須經過 reset synchronizer（至少兩級 FF），確保與目的時鐘同步；assert 可以是非同步的，依據規則 CLK-004。",
+    "source_doc": "clock_domain_standard.md",
+    "rule_id": "CLK-004"
+  },
+  {
+    "question": "如果 Spec 寫著「The request signal passes through a single FF before entering the 400MHz domain」，這違反哪條規則？",
+    "ground_truth": "違反 CLK-001，因為單 bit CDC 信號必須經過至少兩級 synchronizer。",
+    "source_doc": "clock_domain_standard.md",
+    "rule_id": "CLK-001"
+  },
+  {
+    "question": "為什麼多 bit 信號不能直接用 synchronizer array 跨時鐘域？",
+    "ground_truth": "因為各 bit 的亞穩態解析時間不同，直接同步會導致接收端採樣到中間過渡狀態，造成資料錯誤，依據規則 CLK-002。",
+    "source_doc": "clock_domain_standard.md",
+    "rule_id": "CLK-002"
+  },
+  {
+    "question": "多個 IP 的 reset 釋放順序應該遵循什麼原則？",
+    "ground_truth": "必須遵循：PLL lock → Memory 初始化 → Peripheral IP reset 釋放 → Master IP reset 釋放。Master 不得在 Peripheral 完成 reset 前釋放，依據規則 RST-001。",
+    "source_doc": "reset_sequence_standard.md",
+    "rule_id": "RST-001"
+  },
+  {
+    "question": "IP 的 reset 信號至少要保持 assert 狀態多少個時鐘週期？",
+    "ground_truth": "至少 16 個目的時鐘週期，確保所有內部狀態機和暫存器完全復位，依據規則 RST-002。",
+    "source_doc": "reset_sequence_standard.md",
+    "rule_id": "RST-002"
+  },
+  {
+    "question": "軟體觸發 IP reset 後，應該如何判斷 reset 是否完成？",
+    "ground_truth": "硬體必須提供 reset_done 狀態旗標（如 RST_STATUS）供軟體輪詢或 interrupt 通知，禁止使用固定等待時間，依據規則 RST-003。",
+    "source_doc": "reset_sequence_standard.md",
+    "rule_id": "RST-003"
+  },
+  {
+    "question": "Power domain 處於 reset 狀態時，其輸出信號需要什麼保護？",
+    "ground_truth": "必須經過 isolation cell 箝位為固定值，防止 X 狀態傳播至 always-on domain，依據規則 RST-004。",
+    "source_doc": "reset_sequence_standard.md",
+    "rule_id": "RST-004"
+  },
+  {
+    "question": "如果 Spec 寫著「Software must wait 1ms before accessing IP registers after reset」，這違反哪條規則？",
+    "ground_truth": "違反 RST-003，因為軟體不得使用固定等待時間判斷 reset 完成，必須依賴硬體 handshake 或狀態旗標。",
+    "source_doc": "reset_sequence_standard.md",
+    "rule_id": "RST-003"
+  },
+  {
+    "question": "如果 Spec 寫著「CPU reset and peripheral reset are released simultaneously after PLL lock」，這違反哪條規則？",
+    "ground_truth": "違反 RST-001，因為 Master IP（CPU）reset 不得在 Peripheral IP 完成 reset 並assert ready 之前釋放。",
+    "source_doc": "reset_sequence_standard.md",
+    "rule_id": "RST-001"
+  },
+  {
+    "question": "當一個 power domain 的輸出直接連接到 always-on domain 且沒有 isolation cell，會造成什麼風險？",
+    "ground_truth": "Power domain 在 reset 或掉電期間輸出為未定義狀態（X），若無 isolation cell 隔離，X 狀態將傳播至 always-on domain，可能導致系統功能錯誤或額外功耗，依據規則 RST-004。",
+    "source_doc": "reset_sequence_standard.md",
+    "rule_id": "RST-004"
+  }
+]
