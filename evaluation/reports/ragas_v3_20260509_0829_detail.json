@@ -1,0 +1,322 @@
+[
+  {
+    "question": "AXI4 Master 介面必須支援哪些 burst 模式？",
+    "answer": "AXI4 Master 介面必須同時支援 INCR 和 WRAP 兩種 burst 模式（AXI-001）。\n\n**後果與影響**：\n若 Master 不支援 WRAP 模式，將導致與公司 legacy cache IP（L2C-310）組成的 cache 子系統不相容，進而產生功能錯誤（AXI-001）。\n\n**原因**：\n公司 legacy cache IP（L2C-310）使用 WRAP burst 進行 cache line fill，因此 Master 必須支援 WRAP 模式以確保相容性（AXI-001）。",
+    "contexts": [
+      "## AXI-001 Burst Mode Support\n\n**類別**：Interface\n**嚴重程度**：Critical\n\n**規定**：\n所有 AXI4 Master 介面必須同時支援 INCR 和 WRAP 兩種 burst 模式。\n\n**違規範例**：\n\"The master interface supports INCR burst mode only.\"\n\n**合規範例**：\n\"The master interface supports both INCR and WRAP burst modes as required by AXI4 specification.\"\n\n**原因**：\n公司 legacy cache IP（L2C-310）使用 WRAP burst 進行 cache line fill，若 Master 不支援 WRAP 模式將導致與 cache 子系統不相容，產生功能錯誤。\n\n---",
+      "## AXI-002 AXI4-Lite AWLEN / ARLEN Constraint\n\n**類別**：Interface\n**嚴重程度**：Critical\n\n**規定**：\n使用 AXI4-Lite 介面時，AWLEN 與 ARLEN 必須固定為 0，禁止使用任何 burst 傳輸。\n\n**違規範例**：\n\"The AXI-Lite configuration interface supports burst transfers with AWLEN up to 15 for efficient register block access.\"\n\n**合規範例**：\n\"The AXI-Lite configuration interface uses single-beat transfers only. AWLEN and ARLEN are tied to 0.\"\n\n**原因**：\nAXI4-Lite 協定規格明確禁止 burst 傳輸，AWLEN ≠ 0 屬於協定違規，會導致 interconnect 行為未定義。\n\n---",
+      "## RST-001 Reset Sequence Ordering\n\n**類別**：Reset\n**嚴重程度**：Critical\n\n**規定**：\n多個 IP 的 reset 釋放必須遵循以下強制順序：\n1. Clock 穩定（PLL lock）\n2. Memory（SRAM / register file）初始化完成\n3. Peripheral IP reset 釋放\n4. Master IP（CPU / DMA）reset 釋放\n\nMaster IP 的 reset 不得在 Peripheral IP 完成 reset 之前釋放。\n\n**違規範例**：\n\"The CPU reset and peripheral reset are released simultaneously after PLL lock.\"\n\"The DMA engine reset is released 10 clock cycles after PLL lock, before the DMAC register interface is initialized.\"\n\n**合規範例**：\n\"The CPU reset is released only after all peripheral IPs have completed their reset sequence and asserted their ready signals. The sequence is: PLL lock → peripheral reset release → peripheral ready → CPU reset release.\"\n\n**原因**：\n若 Master 在 Peripheral 尚未準備好前開始執行，初始化程式碼對 Peripheral 暫存器的第一筆存取將失敗，導致系統啟動失敗或進入不確定狀態。\n\n---"
+    ],
+    "reference": "必須同時支援 INCR 和 WRAP 兩種 burst 模式，依據規則 AXI-001。",
+    "scores": {
+      "context_precision": 1.0,
+      "context_recall": 1.0,
+      "faithfulness": 1.0,
+      "answer_relevancy": 0.6773
+    }
+  },
+  {
+    "question": "使用 AXI4-Lite 介面時，AWLEN 信號應該設定為多少？",
+    "answer": "根據規範內容，使用 AXI4-Lite 介面時，AWLEN 信號必須固定為 0。\n\n**後果與影響**：\n若 AWLEN 信號不固定為 0，將導致 interconnect 行為未定義。\n\n**原因**：\nAXI4-Lite 協定規格明確禁止 burst 傳輸，AWLEN ≠ 0 屬於協定違規。\n\n**相關規則 ID**：AXI-002",
+    "contexts": [
+      "## AXI-002 AXI4-Lite AWLEN / ARLEN Constraint\n\n**類別**：Interface\n**嚴重程度**：Critical\n\n**規定**：\n使用 AXI4-Lite 介面時，AWLEN 與 ARLEN 必須固定為 0，禁止使用任何 burst 傳輸。\n\n**違規範例**：\n\"The AXI-Lite configuration interface supports burst transfers with AWLEN up to 15 for efficient register block access.\"\n\n**合規範例**：\n\"The AXI-Lite configuration interface uses single-beat transfers only. AWLEN and ARLEN are tied to 0.\"\n\n**原因**：\nAXI4-Lite 協定規格明確禁止 burst 傳輸，AWLEN ≠ 0 屬於協定違規，會導致 interconnect 行為未定義。\n\n---",
+      "## AXI-001 Burst Mode Support\n\n**類別**：Interface\n**嚴重程度**：Critical\n\n**規定**：\n所有 AXI4 Master 介面必須同時支援 INCR 和 WRAP 兩種 burst 模式。\n\n**違規範例**：\n\"The master interface supports INCR burst mode only.\"\n\n**合規範例**：\n\"The master interface supports both INCR and WRAP burst modes as required by AXI4 specification.\"\n\n**原因**：\n公司 legacy cache IP（L2C-310）使用 WRAP burst 進行 cache line fill，若 Master 不支援 WRAP 模式將導致與 cache 子系統不相容，產生功能錯誤。\n\n---",
+      "## RST-004 Isolation Cell Requirement During Power Domain Reset\n\n**類別**：Reset / Power\n**嚴重程度**：Critical\n\n**規定**：\n當一個 power domain 處於 reset 或 power-off 狀態時，該 domain 的所有輸出信號必須經過 isolation cell 箝位（clamp）為固定值（通常為 0 或 1），防止 X 狀態或浮接信號傳播至 always-on domain。\n\n**違規範例**：\n\"The video encoder power domain outputs are directly connected to the display controller inputs without isolation cells.\"\n\n**合規範例**：\n\"All outputs from the video encoder power domain pass through ISO_AND isolation cells. The isolation enable signal is asserted before the power domain reset is asserted and de-asserted after power-up is complete.\"\n\n**原因**：\nPower domain 在 reset 或掉電期間其輸出為未定義狀態（X 或浮接），若無 isolation cell 隔離，X 狀態將傳播至 always-on domain，可能導致系統級功能錯誤或不必要的功耗。"
+    ],
+    "reference": "AWLEN 與 ARLEN 必須固定為 0，禁止使用任何 burst 傳輸，依據規則 AXI-002。",
+    "scores": {
+      "context_precision": 1.0,
+      "context_recall": 1.0,
+      "faithfulness": 1.0,
+      "answer_relevancy": 0.5571
+    }
+  },
+  {
+    "question": "AXI4 Master 的最大 outstanding write transaction 數量限制是多少？",
+    "answer": "AXI4 Master 的最大 outstanding write transaction 數量不得超過 16。\n\n**原因**：\n根據 **AXI-003 Outstanding Transaction Limit** 規定，公司標準 interconnect（NIC-400）的 transaction ID table 每個 Master port 僅分配 16 個 entry，超過此限制將導致 interconnect 拒絕新的 transaction。因此，AWID 空間不得超過 4-bit。",
+    "contexts": [
+      "## AXI-004 Write Response Ordering\n\n**類別**：Interface\n**嚴重程度**：Critical\n\n**規定**：\nAXI4 Master 在收到前一筆 write transaction 的 BRESP 之前，不得對相同位址發出第二筆 write transaction。\n\n**違規範例**：\n\"The master may issue multiple write transactions to the same address without waiting for BRESP, relying on the interconnect to maintain order.\"\n\n**合規範例**：\n\"The master tracks outstanding write transactions per address and waits for BRESP before issuing a subsequent write to the same address.\"\n\n**原因**：\n不同 outstanding write 到相同位址在通過 interconnect 時順序無法保證，可能導致最終寫入值錯誤。\n\n---",
+      "## AXI-003 Outstanding Transaction Limit\n\n**類別**：Interface\n**嚴重程度**：Warning\n\n**規定**：\nAXI4 Master 介面的最大 outstanding write transaction 數量不得超過 16（即 AWID 空間不得超過 4-bit）。\n\n**違規範例**：\n\"The master supports up to 256 outstanding write transactions with 8-bit AWID.\"\n\n**合規範例**：\n\"The master supports up to 16 outstanding write transactions. AWID is 4-bit wide.\"\n\n**原因**：\n公司標準 interconnect（NIC-400）的 transaction ID table 每個 Master port 僅分配 16 個 entry，超過將導致 interconnect 拒絕新的 transaction。\n\n---",
+      "## AXI-005 WSTRB Usage for Partial Write\n\n**類別**：Interface\n**嚴重程度**：Warning\n\n**規定**：\n進行 partial write（不對齊或小於資料總線寬度的寫入）時，Master 必須正確設定 WSTRB，不得將未使用的 byte lane 的 WSTRB 設為 1。\n\n**違規範例**：\n\"For all write transactions, WSTRB is set to all-ones (0xFF for 64-bit bus) regardless of actual byte enables.\"\n\n**合規範例**：\n\"WSTRB reflects the valid byte lanes for each write beat. For a 32-bit write on a 64-bit bus, only the corresponding 4 bits of WSTRB are asserted.\"\n\n**原因**：\nWSTRB 全 1 且資料未填入的 byte lane 可能覆蓋相鄰記憶體內容，導致資料損毀。"
+    ],
+    "reference": "不得超過 16 個，AWID 寬度不得超過 4-bit，依據規則 AXI-003。",
+    "scores": {
+      "context_precision": 0.5,
+      "context_recall": 1.0,
+      "faithfulness": 1.0,
+      "answer_relevancy": 0.8846
+    }
+  },
+  {
+    "question": "當 Master 要對相同位址發出第二筆 write 時，必須等待什麼信號？",
+    "answer": "當 Master 要對相同位址發出第二筆 write 時，必須等待前一筆 write transaction 的 **BRESP** 信號。\n\n**後果與影響：**\n若 Master 在收到前一筆 write transaction 的 BRESP 之前，就對相同位址發出第二筆 write transaction，將會違反 **AXI-004 Write Response Ordering** 規定。這可能導致不同 outstanding write 到相同位址在通過 interconnect 時順序無法保證。\n\n**原因：**\n根據 **AXI-004 Write Response Ordering** 的說明，不同 outstanding write 到相同位址在通過 interconnect 時順序無法保證，可能導致最終寫入值錯誤。",
+    "contexts": [
+      "## AXI-004 Write Response Ordering\n\n**類別**：Interface\n**嚴重程度**：Critical\n\n**規定**：\nAXI4 Master 在收到前一筆 write transaction 的 BRESP 之前，不得對相同位址發出第二筆 write transaction。\n\n**違規範例**：\n\"The master may issue multiple write transactions to the same address without waiting for BRESP, relying on the interconnect to maintain order.\"\n\n**合規範例**：\n\"The master tracks outstanding write transactions per address and waits for BRESP before issuing a subsequent write to the same address.\"\n\n**原因**：\n不同 outstanding write 到相同位址在通過 interconnect 時順序無法保證，可能導致最終寫入值錯誤。\n\n---",
+      "## AXI-005 WSTRB Usage for Partial Write\n\n**類別**：Interface\n**嚴重程度**：Warning\n\n**規定**：\n進行 partial write（不對齊或小於資料總線寬度的寫入）時，Master 必須正確設定 WSTRB，不得將未使用的 byte lane 的 WSTRB 設為 1。\n\n**違規範例**：\n\"For all write transactions, WSTRB is set to all-ones (0xFF for 64-bit bus) regardless of actual byte enables.\"\n\n**合規範例**：\n\"WSTRB reflects the valid byte lanes for each write beat. For a 32-bit write on a 64-bit bus, only the corresponding 4 bits of WSTRB are asserted.\"\n\n**原因**：\nWSTRB 全 1 且資料未填入的 byte lane 可能覆蓋相鄰記憶體內容，導致資料損毀。",
+      "## AXI-003 Outstanding Transaction Limit\n\n**類別**：Interface\n**嚴重程度**：Warning\n\n**規定**：\nAXI4 Master 介面的最大 outstanding write transaction 數量不得超過 16（即 AWID 空間不得超過 4-bit）。\n\n**違規範例**：\n\"The master supports up to 256 outstanding write transactions with 8-bit AWID.\"\n\n**合規範例**：\n\"The master supports up to 16 outstanding write transactions. AWID is 4-bit wide.\"\n\n**原因**：\n公司標準 interconnect（NIC-400）的 transaction ID table 每個 Master port 僅分配 16 個 entry，超過將導致 interconnect 拒絕新的 transaction。\n\n---"
+    ],
+    "reference": "必須等待前一筆 write 的 BRESP 回應收到後，才能發出下一筆相同位址的 write，依據規則 AXI-004。",
+    "scores": {
+      "context_precision": 1.0,
+      "context_recall": 1.0,
+      "faithfulness": 1.0,
+      "answer_relevancy": 0.896
+    }
+  },
+  {
+    "question": "進行 partial write 時，WSTRB 信號應該如何設定？",
+    "answer": "根據規範內容，進行 partial write（不對齊或小於資料總線寬度的寫入）時，WSTRB 信號應該**正確設定，不得將未使用的 byte lane 的 WSTRB 設為 1**。\n\n**後果/影響與原因**：\n如果將未使用的 byte lane 的 WSTRB 設為 1，且資料未填入這些 byte lane，這可能覆蓋相鄰記憶體內容，導致資料損毀。\n（引用規則 ID：AXI-005）",
+    "contexts": [
+      "## AXI-005 WSTRB Usage for Partial Write\n\n**類別**：Interface\n**嚴重程度**：Warning\n\n**規定**：\n進行 partial write（不對齊或小於資料總線寬度的寫入）時，Master 必須正確設定 WSTRB，不得將未使用的 byte lane 的 WSTRB 設為 1。\n\n**違規範例**：\n\"For all write transactions, WSTRB is set to all-ones (0xFF for 64-bit bus) regardless of actual byte enables.\"\n\n**合規範例**：\n\"WSTRB reflects the valid byte lanes for each write beat. For a 32-bit write on a 64-bit bus, only the corresponding 4 bits of WSTRB are asserted.\"\n\n**原因**：\nWSTRB 全 1 且資料未填入的 byte lane 可能覆蓋相鄰記憶體內容，導致資料損毀。",
+      "## AXI-004 Write Response Ordering\n\n**類別**：Interface\n**嚴重程度**：Critical\n\n**規定**：\nAXI4 Master 在收到前一筆 write transaction 的 BRESP 之前，不得對相同位址發出第二筆 write transaction。\n\n**違規範例**：\n\"The master may issue multiple write transactions to the same address without waiting for BRESP, relying on the interconnect to maintain order.\"\n\n**合規範例**：\n\"The master tracks outstanding write transactions per address and waits for BRESP before issuing a subsequent write to the same address.\"\n\n**原因**：\n不同 outstanding write 到相同位址在通過 interconnect 時順序無法保證，可能導致最終寫入值錯誤。\n\n---",
+      "## AXI-003 Outstanding Transaction Limit\n\n**類別**：Interface\n**嚴重程度**：Warning\n\n**規定**：\nAXI4 Master 介面的最大 outstanding write transaction 數量不得超過 16（即 AWID 空間不得超過 4-bit）。\n\n**違規範例**：\n\"The master supports up to 256 outstanding write transactions with 8-bit AWID.\"\n\n**合規範例**：\n\"The master supports up to 16 outstanding write transactions. AWID is 4-bit wide.\"\n\n**原因**：\n公司標準 interconnect（NIC-400）的 transaction ID table 每個 Master port 僅分配 16 個 entry，超過將導致 interconnect 拒絕新的 transaction。\n\n---"
+    ],
+    "reference": "WSTRB 必須只對 valid byte lane 設為 1，未使用的 byte lane 必須設為 0，依據規則 AXI-005。",
+    "scores": {
+      "context_precision": 1.0,
+      "context_recall": 1.0,
+      "faithfulness": 0.7778,
+      "answer_relevancy": 0.911
+    }
+  },
+  {
+    "question": "如果一個 Spec 寫著「The master interface supports INCR burst mode only」，這違反哪條規則？",
+    "answer": "根據您提供的規範內容，如果一個 Spec 寫著「The master interface supports INCR burst mode only」，這違反了 **AXI-001 Burst Mode Support** 規則。\n\n**後果與影響：**\n此違規將導致 Master 介面與公司 legacy cache IP（L2C-310）子系統不相容，進而產生功能錯誤。\n\n**原因：**\n根據 **AXI-001** 的規定，所有 AXI4 Master 介面必須同時支援 INCR 和 WRAP 兩種 burst 模式。公司 legacy cache IP（L2C-310）使用 WRAP burst 進行 cache line fill，若 Master 不支援 WRAP 模式，將無法與之正常協同工作。\n\n**相關規則 ID：** AXI-001",
+    "contexts": [
+      "## AXI-001 Burst Mode Support\n\n**類別**：Interface\n**嚴重程度**：Critical\n\n**規定**：\n所有 AXI4 Master 介面必須同時支援 INCR 和 WRAP 兩種 burst 模式。\n\n**違規範例**：\n\"The master interface supports INCR burst mode only.\"\n\n**合規範例**：\n\"The master interface supports both INCR and WRAP burst modes as required by AXI4 specification.\"\n\n**原因**：\n公司 legacy cache IP（L2C-310）使用 WRAP burst 進行 cache line fill，若 Master 不支援 WRAP 模式將導致與 cache 子系統不相容，產生功能錯誤。\n\n---",
+      "## AXI-002 AXI4-Lite AWLEN / ARLEN Constraint\n\n**類別**：Interface\n**嚴重程度**：Critical\n\n**規定**：\n使用 AXI4-Lite 介面時，AWLEN 與 ARLEN 必須固定為 0，禁止使用任何 burst 傳輸。\n\n**違規範例**：\n\"The AXI-Lite configuration interface supports burst transfers with AWLEN up to 15 for efficient register block access.\"\n\n**合規範例**：\n\"The AXI-Lite configuration interface uses single-beat transfers only. AWLEN and ARLEN are tied to 0.\"\n\n**原因**：\nAXI4-Lite 協定規格明確禁止 burst 傳輸，AWLEN ≠ 0 屬於協定違規，會導致 interconnect 行為未定義。\n\n---",
+      "## AXI-005 WSTRB Usage for Partial Write\n\n**類別**：Interface\n**嚴重程度**：Warning\n\n**規定**：\n進行 partial write（不對齊或小於資料總線寬度的寫入）時，Master 必須正確設定 WSTRB，不得將未使用的 byte lane 的 WSTRB 設為 1。\n\n**違規範例**：\n\"For all write transactions, WSTRB is set to all-ones (0xFF for 64-bit bus) regardless of actual byte enables.\"\n\n**合規範例**：\n\"WSTRB reflects the valid byte lanes for each write beat. For a 32-bit write on a 64-bit bus, only the corresponding 4 bits of WSTRB are asserted.\"\n\n**原因**：\nWSTRB 全 1 且資料未填入的 byte lane 可能覆蓋相鄰記憶體內容，導致資料損毀。"
+    ],
+    "reference": "違反 AXI-001，因為 AXI4 Master 必須同時支援 INCR 和 WRAP 兩種 burst 模式。",
+    "scores": {
+      "context_precision": 1.0,
+      "context_recall": 1.0,
+      "faithfulness": 1.0,
+      "answer_relevancy": 0.8432
+    }
+  },
+  {
+    "question": "AXI-Lite 介面若支援 AWLEN=15 的 burst 傳輸，會造成什麼問題？",
+    "answer": "根據規範 AXI-002，AXI-Lite 介面若支援 AWLEN=15 的 burst 傳輸，會造成以下問題：\n\n**後果/影響**：\n這會導致 interconnect 行為未定義。\n\n**原因**：\nAXI4-Lite 協定規格明確禁止 burst 傳輸，AWLEN ≠ 0 屬於協定違規。",
+    "contexts": [
+      "## AXI-001 Burst Mode Support\n\n**類別**：Interface\n**嚴重程度**：Critical\n\n**規定**：\n所有 AXI4 Master 介面必須同時支援 INCR 和 WRAP 兩種 burst 模式。\n\n**違規範例**：\n\"The master interface supports INCR burst mode only.\"\n\n**合規範例**：\n\"The master interface supports both INCR and WRAP burst modes as required by AXI4 specification.\"\n\n**原因**：\n公司 legacy cache IP（L2C-310）使用 WRAP burst 進行 cache line fill，若 Master 不支援 WRAP 模式將導致與 cache 子系統不相容，產生功能錯誤。\n\n---",
+      "## AXI-002 AXI4-Lite AWLEN / ARLEN Constraint\n\n**類別**：Interface\n**嚴重程度**：Critical\n\n**規定**：\n使用 AXI4-Lite 介面時，AWLEN 與 ARLEN 必須固定為 0，禁止使用任何 burst 傳輸。\n\n**違規範例**：\n\"The AXI-Lite configuration interface supports burst transfers with AWLEN up to 15 for efficient register block access.\"\n\n**合規範例**：\n\"The AXI-Lite configuration interface uses single-beat transfers only. AWLEN and ARLEN are tied to 0.\"\n\n**原因**：\nAXI4-Lite 協定規格明確禁止 burst 傳輸，AWLEN ≠ 0 屬於協定違規，會導致 interconnect 行為未定義。\n\n---",
+      "## RST-002 Reset Assert Duration\n\n**類別**：Reset\n**嚴重程度**：Warning\n\n**規定**：\nIP 的 reset 信號必須至少保持 assert 狀態 16 個目的時鐘週期，以確保所有內部狀態機和暫存器完全復位。\n\n**違規範例**：\n\"The IP reset is asserted for 2 clock cycles before being released.\"\n\n**合規範例**：\n\"The IP reset is asserted for a minimum of 16 clock cycles of the IP's operating clock before de-assertion.\"\n\n**原因**：\n部分內部狀態機（如多級 pipeline）需要多個時鐘週期才能達到確定的初始狀態，過短的 reset pulse 可能導致狀態機停留在未定義的中間狀態。\n\n---"
+    ],
+    "reference": "違反 AXI4-Lite 協定規格，會導致 interconnect 行為未定義，依據規則 AXI-002。",
+    "scores": {
+      "context_precision": 0.5,
+      "context_recall": 1.0,
+      "faithfulness": 1.0,
+      "answer_relevancy": 0.882
+    }
+  },
+  {
+    "question": "跨時鐘域的單 bit 控制信號（如 request）必須經過幾級 synchronizer？",
+    "answer": "跨時鐘域的單 bit 控制信號（如 request）必須經過**至少兩級 D flip-flop synchronizer**。\n\n**原因**：單級 synchronizer 無法將亞穩態（metastability）發生機率降至可接受水準（< 1 failure per 10 years），兩級為業界最低標準。\n\n**相關規則 ID**：CLK-001",
+    "contexts": [
+      "## CLK-001 Synchronizer Requirement for Single-bit Signals\n\n**類別**：Clock\n**嚴重程度**：Critical\n\n**規定**：\n跨時鐘域的單 bit 控制信號（enable、valid、request 等）必須經過至少兩級 D flip-flop synchronizer，且兩級 FF 必須使用目的時鐘域的時鐘驅動。\n\n**違規範例**：\n\"The request signal is directly connected from the 200MHz domain to the 100MHz domain.\"\n\"The enable signal passes through a single FF before entering the 400MHz clock domain.\"\n\n**合規範例**：\n\"The request signal passes through a 2-stage synchronizer clocked by the destination 100MHz clock before entering the 100MHz domain.\"\n\n**原因**：\n單級 synchronizer 無法將亞穩態（metastability）發生機率降至可接受水準（< 1 failure per 10 years），兩級為業界最低標準。\n\n---",
+      "## CLK-002 Multi-bit Signal CDC Handling\n\n**類別**：Clock\n**嚴重程度**：Critical\n\n**規定**：\n跨時鐘域的多 bit 資料信號（data bus、counter value 等）禁止直接使用 multi-bit synchronizer，必須採用以下其中一種方式：\n（a）Gray code encoding（適用於連續遞增/遞減的計數器）\n（b）Handshake protocol（適用於一般控制信號）\n（c）Async FIFO（適用於資料流）\n\n**違規範例**：\n\"The 32-bit data bus is synchronized using a 2-stage synchronizer array in the destination clock domain.\"\n\n**合規範例（方法 a）**：\n\"The 8-bit read pointer is Gray-coded before crossing to the write clock domain, then binary-decoded after synchronization.\"\n\n**合規範例（方法 c）**：\n\"Data transfer between the 200MHz producer and 100MHz consumer is implemented using an asynchronous FIFO with independent read/write pointers.\"\n\n**原因**：\n多 bit 信號各 bit 的亞穩態解析時間不同，直接同步會導致接收端採樣到中間過渡狀態，造成資料錯誤。\n\n---",
+      "## CLK-004 Async Reset Synchronization\n\n**類別**：Clock / Reset\n**嚴重程度**：Critical\n\n**規定**：\n非同步 reset 信號在釋放（de-assert）時必須經過 reset synchronizer（至少兩級 FF），確保 reset 的釋放與目的時鐘同步。Reset 的 assert 可以是非同步的。\n\n**違規範例**：\n\"The global reset signal is directly de-asserted asynchronously across all clock domains simultaneously.\"\n\n**合規範例**：\n\"Each clock domain has a dedicated reset synchronizer. The reset synchronizer asserts reset asynchronously and de-asserts reset synchronously with the local clock after two FF stages.\"\n\n**原因**：\n非同步 reset 釋放可能在不同 FF 的 recovery time 邊界發生，導致部分邏輯退出 reset 而其他邏輯仍在 reset 狀態，造成系統狀態不一致（reset distribution skew 問題）。"
+    ],
+    "reference": "必須經過至少兩級 D flip-flop synchronizer，且兩級 FF 必須由目的時鐘域驅動，依據規則 CLK-001。",
+    "scores": {
+      "context_precision": 0.8333,
+      "context_recall": 1.0,
+      "faithfulness": 1.0,
+      "answer_relevancy": 0.7042
+    }
+  },
+  {
+    "question": "32-bit 資料總線跨時鐘域傳輸時，可以直接用 32 個 2-stage synchronizer 嗎？",
+    "answer": "不可以。\n\n**後果與影響**：\n如果 32-bit 資料總線跨時鐘域傳輸時直接使用 32 個 2-stage synchronizer，接收端可能會採樣到中間過渡狀態，導致資料錯誤。\n\n**原因**：\n根據 **CLK-002** 規定，跨時鐘域的多 bit 資料信號（如 data bus）禁止直接使用 multi-bit synchronizer。這是因為多 bit 信號各 bit 的亞穩態解析時間不同，直接同步會導致接收端採樣到中間過渡狀態，造成資料錯誤。\n\n**正確做法**：\n必須採用以下其中一種方式：\n（a）Gray code encoding（適用於連續遞增/遞減的計數器）\n（b）Handshake protocol（適用於一般控制信號）\n（c）Async FIFO（適用於資料流）",
+    "contexts": [
+      "## CLK-002 Multi-bit Signal CDC Handling\n\n**類別**：Clock\n**嚴重程度**：Critical\n\n**規定**：\n跨時鐘域的多 bit 資料信號（data bus、counter value 等）禁止直接使用 multi-bit synchronizer，必須採用以下其中一種方式：\n（a）Gray code encoding（適用於連續遞增/遞減的計數器）\n（b）Handshake protocol（適用於一般控制信號）\n（c）Async FIFO（適用於資料流）\n\n**違規範例**：\n\"The 32-bit data bus is synchronized using a 2-stage synchronizer array in the destination clock domain.\"\n\n**合規範例（方法 a）**：\n\"The 8-bit read pointer is Gray-coded before crossing to the write clock domain, then binary-decoded after synchronization.\"\n\n**合規範例（方法 c）**：\n\"Data transfer between the 200MHz producer and 100MHz consumer is implemented using an asynchronous FIFO with independent read/write pointers.\"\n\n**原因**：\n多 bit 信號各 bit 的亞穩態解析時間不同，直接同步會導致接收端採樣到中間過渡狀態，造成資料錯誤。\n\n---",
+      "## CLK-001 Synchronizer Requirement for Single-bit Signals\n\n**類別**：Clock\n**嚴重程度**：Critical\n\n**規定**：\n跨時鐘域的單 bit 控制信號（enable、valid、request 等）必須經過至少兩級 D flip-flop synchronizer，且兩級 FF 必須使用目的時鐘域的時鐘驅動。\n\n**違規範例**：\n\"The request signal is directly connected from the 200MHz domain to the 100MHz domain.\"\n\"The enable signal passes through a single FF before entering the 400MHz clock domain.\"\n\n**合規範例**：\n\"The request signal passes through a 2-stage synchronizer clocked by the destination 100MHz clock before entering the 100MHz domain.\"\n\n**原因**：\n單級 synchronizer 無法將亞穩態（metastability）發生機率降至可接受水準（< 1 failure per 10 years），兩級為業界最低標準。\n\n---",
+      "## RST-002 Reset Assert Duration\n\n**類別**：Reset\n**嚴重程度**：Warning\n\n**規定**：\nIP 的 reset 信號必須至少保持 assert 狀態 16 個目的時鐘週期，以確保所有內部狀態機和暫存器完全復位。\n\n**違規範例**：\n\"The IP reset is asserted for 2 clock cycles before being released.\"\n\n**合規範例**：\n\"The IP reset is asserted for a minimum of 16 clock cycles of the IP's operating clock before de-assertion.\"\n\n**原因**：\n部分內部狀態機（如多級 pipeline）需要多個時鐘週期才能達到確定的初始狀態，過短的 reset pulse 可能導致狀態機停留在未定義的中間狀態。\n\n---"
+    ],
+    "reference": "不可以。多 bit 信號禁止直接使用 multi-bit synchronizer array，必須採用 Gray code、handshake protocol 或 async FIFO，依據規則 CLK-002。",
+    "scores": {
+      "context_precision": 1.0,
+      "context_recall": 1.0,
+      "faithfulness": 1.0,
+      "answer_relevancy": 0.7679
+    }
+  },
+  {
+    "question": "Clock gating 的 enable 信號應該在時鐘的哪個相位穩定？",
+    "answer": "Clock gating 的 enable 信號必須在被門控時鐘的**低電位期間**穩定。\n\n**後果與影響**：\n如果 enable 信號未能在被門控時鐘的低電位期間穩定，即使使用了 ICG cell，也可能導致時鐘切換時產生 glitch。這些 glitch 會導致後級 FF 誤觸發，進而引發系統功能錯誤或不穩定。\n\n**原因**：\n根據規範 CLK-003，ICG cell 利用其內部的 latch 特性，確保時鐘切換（即時鐘的開啟或關閉）只在被門控時鐘的低電位期間發生。這樣可以有效地消除因時鐘切換而可能產生的 glitch。因此，enable 信號必須在時鐘低電位期間穩定，以確保 ICG cell 能夠正確地捕獲 enable 狀態並在安全的時間點進行時鐘門控，避免產生不必要的時鐘邊緣或毛刺。\n\n**相關規則 ID**：CLK-003",
+    "contexts": [
+      "## CLK-003 Clock Gating Enable Signal Timing\n\n**類別**：Clock\n**嚴重程度**：Critical\n\n**規定**：\nClock gating cell 的 enable 信號必須在被門控時鐘的低電位期間穩定（即 enable 信號相對於被門控時鐘的 setup/hold window 必須在時鐘低電位期間）。Enable 信號必須由 ICG（Integrated Clock Gating）cell 驅動，不得使用純組合邏輯門控時鐘。\n\n**違規範例**：\n\"The clock is gated using: gated_clk = clk AND enable, where enable is combinational logic output.\"\n\n**合規範例**：\n\"The clock is gated using a library ICG cell (CKLNQD1) with the enable signal registered in the low phase of the clock.\"\n\n**原因**：\n組合邏輯門控時鐘會產生 glitch，導致後級 FF 誤觸發；ICG cell 利用 latch 特性確保時鐘切換只在低電位發生，消除 glitch。\n\n---",
+      "## RST-004 Isolation Cell Requirement During Power Domain Reset\n\n**類別**：Reset / Power\n**嚴重程度**：Critical\n\n**規定**：\n當一個 power domain 處於 reset 或 power-off 狀態時，該 domain 的所有輸出信號必須經過 isolation cell 箝位（clamp）為固定值（通常為 0 或 1），防止 X 狀態或浮接信號傳播至 always-on domain。\n\n**違規範例**：\n\"The video encoder power domain outputs are directly connected to the display controller inputs without isolation cells.\"\n\n**合規範例**：\n\"All outputs from the video encoder power domain pass through ISO_AND isolation cells. The isolation enable signal is asserted before the power domain reset is asserted and de-asserted after power-up is complete.\"\n\n**原因**：\nPower domain 在 reset 或掉電期間其輸出為未定義狀態（X 或浮接），若無 isolation cell 隔離，X 狀態將傳播至 always-on domain，可能導致系統級功能錯誤或不必要的功耗。",
+      "## CLK-001 Synchronizer Requirement for Single-bit Signals\n\n**類別**：Clock\n**嚴重程度**：Critical\n\n**規定**：\n跨時鐘域的單 bit 控制信號（enable、valid、request 等）必須經過至少兩級 D flip-flop synchronizer，且兩級 FF 必須使用目的時鐘域的時鐘驅動。\n\n**違規範例**：\n\"The request signal is directly connected from the 200MHz domain to the 100MHz domain.\"\n\"The enable signal passes through a single FF before entering the 400MHz clock domain.\"\n\n**合規範例**：\n\"The request signal passes through a 2-stage synchronizer clocked by the destination 100MHz clock before entering the 100MHz domain.\"\n\n**原因**：\n單級 synchronizer 無法將亞穩態（metastability）發生機率降至可接受水準（< 1 failure per 10 years），兩級為業界最低標準。\n\n---"
+    ],
+    "reference": "enable 信號必須在被門控時鐘的低電位期間穩定，且必須由 ICG cell 驅動，依據規則 CLK-003。",
+    "scores": {
+      "context_precision": 1.0,
+      "context_recall": 1.0,
+      "faithfulness": 0.6667,
+      "answer_relevancy": 0.617
+    }
+  },
+  {
+    "question": "Async reset 信號在釋放（de-assert）時需要什麼處理？",
+    "answer": "根據規範內容，Async reset 信號在釋放（de-assert）時需要以下處理：\n\n非同步 reset 信號在釋放（de-assert）時必須經過 reset synchronizer（至少兩級 FF），確保 reset 的釋放與目的時鐘同步。Reset 的 assert 可以是非同步的。\n\n**後果與影響：**\n若未經此處理，非同步 reset 釋放可能在不同 FF 的 recovery time 邊界發生，導致部分邏輯退出 reset 而其他邏輯仍在 reset 狀態，造成系統狀態不一致。\n\n**原因：**\n這種不一致性是由於 reset distribution skew 問題引起的。\n\n**相關規則 ID：** CLK-004",
+    "contexts": [
+      "## CLK-004 Async Reset Synchronization\n\n**類別**：Clock / Reset\n**嚴重程度**：Critical\n\n**規定**：\n非同步 reset 信號在釋放（de-assert）時必須經過 reset synchronizer（至少兩級 FF），確保 reset 的釋放與目的時鐘同步。Reset 的 assert 可以是非同步的。\n\n**違規範例**：\n\"The global reset signal is directly de-asserted asynchronously across all clock domains simultaneously.\"\n\n**合規範例**：\n\"Each clock domain has a dedicated reset synchronizer. The reset synchronizer asserts reset asynchronously and de-asserts reset synchronously with the local clock after two FF stages.\"\n\n**原因**：\n非同步 reset 釋放可能在不同 FF 的 recovery time 邊界發生，導致部分邏輯退出 reset 而其他邏輯仍在 reset 狀態，造成系統狀態不一致（reset distribution skew 問題）。",
+      "## RST-002 Reset Assert Duration\n\n**類別**：Reset\n**嚴重程度**：Warning\n\n**規定**：\nIP 的 reset 信號必須至少保持 assert 狀態 16 個目的時鐘週期，以確保所有內部狀態機和暫存器完全復位。\n\n**違規範例**：\n\"The IP reset is asserted for 2 clock cycles before being released.\"\n\n**合規範例**：\n\"The IP reset is asserted for a minimum of 16 clock cycles of the IP's operating clock before de-assertion.\"\n\n**原因**：\n部分內部狀態機（如多級 pipeline）需要多個時鐘週期才能達到確定的初始狀態，過短的 reset pulse 可能導致狀態機停留在未定義的中間狀態。\n\n---",
+      "## RST-001 Reset Sequence Ordering\n\n**類別**：Reset\n**嚴重程度**：Critical\n\n**規定**：\n多個 IP 的 reset 釋放必須遵循以下強制順序：\n1. Clock 穩定（PLL lock）\n2. Memory（SRAM / register file）初始化完成\n3. Peripheral IP reset 釋放\n4. Master IP（CPU / DMA）reset 釋放\n\nMaster IP 的 reset 不得在 Peripheral IP 完成 reset 之前釋放。\n\n**違規範例**：\n\"The CPU reset and peripheral reset are released simultaneously after PLL lock.\"\n\"The DMA engine reset is released 10 clock cycles after PLL lock, before the DMAC register interface is initialized.\"\n\n**合規範例**：\n\"The CPU reset is released only after all peripheral IPs have completed their reset sequence and asserted their ready signals. The sequence is: PLL lock → peripheral reset release → peripheral ready → CPU reset release.\"\n\n**原因**：\n若 Master 在 Peripheral 尚未準備好前開始執行，初始化程式碼對 Peripheral 暫存器的第一筆存取將失敗，導致系統啟動失敗或進入不確定狀態。\n\n---"
+    ],
+    "reference": "reset 釋放必須經過 reset synchronizer（至少兩級 FF），確保與目的時鐘同步；assert 可以是非同步的，依據規則 CLK-004。",
+    "scores": {
+      "context_precision": 1.0,
+      "context_recall": 1.0,
+      "faithfulness": 1.0,
+      "answer_relevancy": 0.9612
+    }
+  },
+  {
+    "question": "如果 Spec 寫著「The request signal passes through a single FF before entering the 400MHz domain」，這違反哪條規則？",
+    "answer": "根據您提供的規範內容，該描述違反了以下規則：\n\n**違反規則 ID**：CLK-001\n\n**後果與影響**：\n根據 CLK-001 的「原因」說明，單級 synchronizer 無法將亞穩態（metastability）發生機率降至可接受水準（< 1 failure per 10 years）。這意味著系統在運行過程中，由於亞穩態的發生，可能會導致「request signal」在目的時鐘域（400MHz domain）被錯誤地採樣，進而引發功能錯誤、數據損壞或系統不穩定。\n\n**原因**：\nCLK-001 規定「跨時鐘域的單 bit 控制信號（enable、valid、request 等）必須經過至少兩級 D flip-flop synchronizer」。而描述中「The request signal passes through a single FF before entering the 400MHz domain」明確指出只使用了「單級 FF」，這不符合 CLK-001 規定的「至少兩級 D flip-flop synchronizer」要求。\n\n**相關規則 ID**：CLK-001",
+    "contexts": [
+      "## CLK-001 Synchronizer Requirement for Single-bit Signals\n\n**類別**：Clock\n**嚴重程度**：Critical\n\n**規定**：\n跨時鐘域的單 bit 控制信號（enable、valid、request 等）必須經過至少兩級 D flip-flop synchronizer，且兩級 FF 必須使用目的時鐘域的時鐘驅動。\n\n**違規範例**：\n\"The request signal is directly connected from the 200MHz domain to the 100MHz domain.\"\n\"The enable signal passes through a single FF before entering the 400MHz clock domain.\"\n\n**合規範例**：\n\"The request signal passes through a 2-stage synchronizer clocked by the destination 100MHz clock before entering the 100MHz domain.\"\n\n**原因**：\n單級 synchronizer 無法將亞穩態（metastability）發生機率降至可接受水準（< 1 failure per 10 years），兩級為業界最低標準。\n\n---",
+      "## RST-004 Isolation Cell Requirement During Power Domain Reset\n\n**類別**：Reset / Power\n**嚴重程度**：Critical\n\n**規定**：\n當一個 power domain 處於 reset 或 power-off 狀態時，該 domain 的所有輸出信號必須經過 isolation cell 箝位（clamp）為固定值（通常為 0 或 1），防止 X 狀態或浮接信號傳播至 always-on domain。\n\n**違規範例**：\n\"The video encoder power domain outputs are directly connected to the display controller inputs without isolation cells.\"\n\n**合規範例**：\n\"All outputs from the video encoder power domain pass through ISO_AND isolation cells. The isolation enable signal is asserted before the power domain reset is asserted and de-asserted after power-up is complete.\"\n\n**原因**：\nPower domain 在 reset 或掉電期間其輸出為未定義狀態（X 或浮接），若無 isolation cell 隔離，X 狀態將傳播至 always-on domain，可能導致系統級功能錯誤或不必要的功耗。",
+      "## AXI-002 AXI4-Lite AWLEN / ARLEN Constraint\n\n**類別**：Interface\n**嚴重程度**：Critical\n\n**規定**：\n使用 AXI4-Lite 介面時，AWLEN 與 ARLEN 必須固定為 0，禁止使用任何 burst 傳輸。\n\n**違規範例**：\n\"The AXI-Lite configuration interface supports burst transfers with AWLEN up to 15 for efficient register block access.\"\n\n**合規範例**：\n\"The AXI-Lite configuration interface uses single-beat transfers only. AWLEN and ARLEN are tied to 0.\"\n\n**原因**：\nAXI4-Lite 協定規格明確禁止 burst 傳輸，AWLEN ≠ 0 屬於協定違規，會導致 interconnect 行為未定義。\n\n---"
+    ],
+    "reference": "違反 CLK-001，因為單 bit CDC 信號必須經過至少兩級 synchronizer。",
+    "scores": {
+      "context_precision": 1.0,
+      "context_recall": 1.0,
+      "faithfulness": 0.5,
+      "answer_relevancy": 0.662
+    }
+  },
+  {
+    "question": "為什麼多 bit 信號不能直接用 synchronizer array 跨時鐘域？",
+    "answer": "根據規範內容，多 bit 信號禁止直接使用 synchronizer array 跨時鐘域，原因、後果與影響如下：\n\n**原因**：\n多 bit 信號的每個位元（bit）在跨時鐘域時，其亞穩態（metastability）的解析時間可能不同。\n\n**後果與影響**：\n如果直接使用 synchronizer array 進行同步，接收端可能會在不同位元處於不同的亞穩態解析階段時進行採樣。這會導致接收端採樣到多 bit 信號的**中間過渡狀態**，而非發送端實際發送的穩定值，進而**造成資料錯誤**。\n\n**相關規則 ID**：CLK-002",
+    "contexts": [
+      "## CLK-001 Synchronizer Requirement for Single-bit Signals\n\n**類別**：Clock\n**嚴重程度**：Critical\n\n**規定**：\n跨時鐘域的單 bit 控制信號（enable、valid、request 等）必須經過至少兩級 D flip-flop synchronizer，且兩級 FF 必須使用目的時鐘域的時鐘驅動。\n\n**違規範例**：\n\"The request signal is directly connected from the 200MHz domain to the 100MHz domain.\"\n\"The enable signal passes through a single FF before entering the 400MHz clock domain.\"\n\n**合規範例**：\n\"The request signal passes through a 2-stage synchronizer clocked by the destination 100MHz clock before entering the 100MHz domain.\"\n\n**原因**：\n單級 synchronizer 無法將亞穩態（metastability）發生機率降至可接受水準（< 1 failure per 10 years），兩級為業界最低標準。\n\n---",
+      "## CLK-002 Multi-bit Signal CDC Handling\n\n**類別**：Clock\n**嚴重程度**：Critical\n\n**規定**：\n跨時鐘域的多 bit 資料信號（data bus、counter value 等）禁止直接使用 multi-bit synchronizer，必須採用以下其中一種方式：\n（a）Gray code encoding（適用於連續遞增/遞減的計數器）\n（b）Handshake protocol（適用於一般控制信號）\n（c）Async FIFO（適用於資料流）\n\n**違規範例**：\n\"The 32-bit data bus is synchronized using a 2-stage synchronizer array in the destination clock domain.\"\n\n**合規範例（方法 a）**：\n\"The 8-bit read pointer is Gray-coded before crossing to the write clock domain, then binary-decoded after synchronization.\"\n\n**合規範例（方法 c）**：\n\"Data transfer between the 200MHz producer and 100MHz consumer is implemented using an asynchronous FIFO with independent read/write pointers.\"\n\n**原因**：\n多 bit 信號各 bit 的亞穩態解析時間不同，直接同步會導致接收端採樣到中間過渡狀態，造成資料錯誤。\n\n---",
+      "## CLK-004 Async Reset Synchronization\n\n**類別**：Clock / Reset\n**嚴重程度**：Critical\n\n**規定**：\n非同步 reset 信號在釋放（de-assert）時必須經過 reset synchronizer（至少兩級 FF），確保 reset 的釋放與目的時鐘同步。Reset 的 assert 可以是非同步的。\n\n**違規範例**：\n\"The global reset signal is directly de-asserted asynchronously across all clock domains simultaneously.\"\n\n**合規範例**：\n\"Each clock domain has a dedicated reset synchronizer. The reset synchronizer asserts reset asynchronously and de-asserts reset synchronously with the local clock after two FF stages.\"\n\n**原因**：\n非同步 reset 釋放可能在不同 FF 的 recovery time 邊界發生，導致部分邏輯退出 reset 而其他邏輯仍在 reset 狀態，造成系統狀態不一致（reset distribution skew 問題）。"
+    ],
+    "reference": "因為各 bit 的亞穩態解析時間不同，直接同步會導致接收端採樣到中間過渡狀態，造成資料錯誤，依據規則 CLK-002。",
+    "scores": {
+      "context_precision": 0.5,
+      "context_recall": 1.0,
+      "faithfulness": 1.0,
+      "answer_relevancy": 0.8858
+    }
+  },
+  {
+    "question": "多個 IP 的 reset 釋放順序應該遵循什麼原則？",
+    "answer": "根據規範內容 RST-001 Reset Sequence Ordering，多個 IP 的 reset 釋放必須遵循以下強制順序：\n\n1.  **Clock 穩定（PLL lock）**\n2.  **Memory（SRAM / register file）初始化完成**\n3.  **Peripheral IP reset 釋放**\n4.  **Master IP（CPU / DMA）reset 釋放**\n\n**特別強調：** Master IP 的 reset 不得在 Peripheral IP 完成 reset 之前釋放。\n\n**後果與影響：**\n若未能遵循此順序，即 Master IP 在 Peripheral IP 尚未準備好前開始執行，初始化程式碼對 Peripheral 暫存器的第一筆存取將失敗。\n\n**原因：**\n根據 RST-001，這將導致系統啟動失敗或進入不確定狀態。這是因為 Master IP 在 Peripheral IP 尚未完成初始化並準備就緒時，嘗試存取其暫存器會導致錯誤。\n\n此規定屬於 **Critical** 嚴重程度。",
+    "contexts": [
+      "## RST-001 Reset Sequence Ordering\n\n**類別**：Reset\n**嚴重程度**：Critical\n\n**規定**：\n多個 IP 的 reset 釋放必須遵循以下強制順序：\n1. Clock 穩定（PLL lock）\n2. Memory（SRAM / register file）初始化完成\n3. Peripheral IP reset 釋放\n4. Master IP（CPU / DMA）reset 釋放\n\nMaster IP 的 reset 不得在 Peripheral IP 完成 reset 之前釋放。\n\n**違規範例**：\n\"The CPU reset and peripheral reset are released simultaneously after PLL lock.\"\n\"The DMA engine reset is released 10 clock cycles after PLL lock, before the DMAC register interface is initialized.\"\n\n**合規範例**：\n\"The CPU reset is released only after all peripheral IPs have completed their reset sequence and asserted their ready signals. The sequence is: PLL lock → peripheral reset release → peripheral ready → CPU reset release.\"\n\n**原因**：\n若 Master 在 Peripheral 尚未準備好前開始執行，初始化程式碼對 Peripheral 暫存器的第一筆存取將失敗，導致系統啟動失敗或進入不確定狀態。\n\n---",
+      "## RST-003 Software-Triggered Reset Completion Handshake\n\n**類別**：Reset\n**嚴重程度**：Warning\n\n**規定**：\n軟體觸發的 IP reset（透過暫存器寫入）完成後，硬體必須提供 reset_done 狀態旗標供軟體輪詢或 interrupt 通知，禁止要求軟體以固定等待時間判斷 reset 是否完成。\n\n**違規範例**：\n\"After writing 1 to RST_CTRL[0], software must wait 1ms before accessing any IP registers.\"\n\n**合規範例**：\n\"After writing 1 to RST_CTRL[0], hardware will clear RST_CTRL[0] and set RST_STATUS[0] when the reset sequence is complete. Software polls RST_STATUS[0] before accessing IP registers.\"\n\n**原因**：\n固定等待時間在不同溫度、電壓、製程角（PVT corner）下不可靠，且浪費 CPU 時間；硬體握手機制是唯一可靠的做法。\n\n---",
+      "## RST-002 Reset Assert Duration\n\n**類別**：Reset\n**嚴重程度**：Warning\n\n**規定**：\nIP 的 reset 信號必須至少保持 assert 狀態 16 個目的時鐘週期，以確保所有內部狀態機和暫存器完全復位。\n\n**違規範例**：\n\"The IP reset is asserted for 2 clock cycles before being released.\"\n\n**合規範例**：\n\"The IP reset is asserted for a minimum of 16 clock cycles of the IP's operating clock before de-assertion.\"\n\n**原因**：\n部分內部狀態機（如多級 pipeline）需要多個時鐘週期才能達到確定的初始狀態，過短的 reset pulse 可能導致狀態機停留在未定義的中間狀態。\n\n---"
+    ],
+    "reference": "必須遵循：PLL lock → Memory 初始化 → Peripheral IP reset 釋放 → Master IP reset 釋放。Master 不得在 Peripheral 完成 reset 前釋放，依據規則 RST-001。",
+    "scores": {
+      "context_precision": 1.0,
+      "context_recall": 1.0,
+      "faithfulness": 0.9333,
+      "answer_relevancy": 0.832
+    }
+  },
+  {
+    "question": "IP 的 reset 信號至少要保持 assert 狀態多少個時鐘週期？",
+    "answer": "根據規範 RST-002 Reset Assert Duration，IP 的 reset 信號必須至少保持 assert 狀態 **16 個目的時鐘週期**。\n\n**後果與影響：**\n若 reset 信號保持 assert 狀態的時間過短，將無法確保所有內部狀態機和暫存器完全復位。這可能導致部分內部狀態機（如多級 pipeline）停留在未定義的中間狀態，進而造成系統行為異常或功能錯誤。\n\n**原因：**\n部分內部狀態機（如多級 pipeline）需要多個時鐘週期才能達到確定的初始狀態。過短的 reset pulse 可能導致狀態機無法完全復位，停留在未定義的中間狀態。\n\n**嚴重程度：** Warning (RST-002)",
+    "contexts": [
+      "## RST-002 Reset Assert Duration\n\n**類別**：Reset\n**嚴重程度**：Warning\n\n**規定**：\nIP 的 reset 信號必須至少保持 assert 狀態 16 個目的時鐘週期，以確保所有內部狀態機和暫存器完全復位。\n\n**違規範例**：\n\"The IP reset is asserted for 2 clock cycles before being released.\"\n\n**合規範例**：\n\"The IP reset is asserted for a minimum of 16 clock cycles of the IP's operating clock before de-assertion.\"\n\n**原因**：\n部分內部狀態機（如多級 pipeline）需要多個時鐘週期才能達到確定的初始狀態，過短的 reset pulse 可能導致狀態機停留在未定義的中間狀態。\n\n---",
+      "## CLK-004 Async Reset Synchronization\n\n**類別**：Clock / Reset\n**嚴重程度**：Critical\n\n**規定**：\n非同步 reset 信號在釋放（de-assert）時必須經過 reset synchronizer（至少兩級 FF），確保 reset 的釋放與目的時鐘同步。Reset 的 assert 可以是非同步的。\n\n**違規範例**：\n\"The global reset signal is directly de-asserted asynchronously across all clock domains simultaneously.\"\n\n**合規範例**：\n\"Each clock domain has a dedicated reset synchronizer. The reset synchronizer asserts reset asynchronously and de-asserts reset synchronously with the local clock after two FF stages.\"\n\n**原因**：\n非同步 reset 釋放可能在不同 FF 的 recovery time 邊界發生，導致部分邏輯退出 reset 而其他邏輯仍在 reset 狀態，造成系統狀態不一致（reset distribution skew 問題）。",
+      "## RST-001 Reset Sequence Ordering\n\n**類別**：Reset\n**嚴重程度**：Critical\n\n**規定**：\n多個 IP 的 reset 釋放必須遵循以下強制順序：\n1. Clock 穩定（PLL lock）\n2. Memory（SRAM / register file）初始化完成\n3. Peripheral IP reset 釋放\n4. Master IP（CPU / DMA）reset 釋放\n\nMaster IP 的 reset 不得在 Peripheral IP 完成 reset 之前釋放。\n\n**違規範例**：\n\"The CPU reset and peripheral reset are released simultaneously after PLL lock.\"\n\"The DMA engine reset is released 10 clock cycles after PLL lock, before the DMAC register interface is initialized.\"\n\n**合規範例**：\n\"The CPU reset is released only after all peripheral IPs have completed their reset sequence and asserted their ready signals. The sequence is: PLL lock → peripheral reset release → peripheral ready → CPU reset release.\"\n\n**原因**：\n若 Master 在 Peripheral 尚未準備好前開始執行，初始化程式碼對 Peripheral 暫存器的第一筆存取將失敗，導致系統啟動失敗或進入不確定狀態。\n\n---"
+    ],
+    "reference": "至少 16 個目的時鐘週期，確保所有內部狀態機和暫存器完全復位，依據規則 RST-002。",
+    "scores": {
+      "context_precision": 1.0,
+      "context_recall": 1.0,
+      "faithfulness": 0.8,
+      "answer_relevancy": 0.8744
+    }
+  },
+  {
+    "question": "軟體觸發 IP reset 後，應該如何判斷 reset 是否完成？",
+    "answer": "根據規範內容，軟體觸發 IP reset 後，判斷 reset 是否完成的方法如下：\n\n軟體觸發的 IP reset 完成後，硬體必須提供 `reset_done` 狀態旗標供軟體輪詢或 interrupt 通知，以判斷 reset 是否完成。\n\n**後果與影響：**\n*   **合規做法：** 軟體透過輪詢 `reset_done` 狀態旗標或接收 interrupt 通知來判斷 reset 完成，確保在 IP 真正準備好後才進行後續操作。\n*   **違規做法：** 若要求軟體以固定等待時間判斷 reset 是否完成，將導致以下後果：\n    *   **不可靠性：** 固定等待時間在不同溫度、電壓、製程角（PVT corner）下不可靠，可能導致 IP 尚未完全復位就開始被存取，進而引發系統啟動失敗或進入不確定狀態。\n    *   **資源浪費：** 浪費 CPU 時間，因為軟體可能在 IP 已經完成 reset 後仍繼續等待，或等待時間不足導致錯誤。\n\n**原因：**\n固定等待時間在不同溫度、電壓、製程角（PVT corner）下不可靠，且浪費 CPU 時間；硬體握手機制是唯一可靠的做法。\n\n**相關規則 ID：** RST-003",
+    "contexts": [
+      "## RST-003 Software-Triggered Reset Completion Handshake\n\n**類別**：Reset\n**嚴重程度**：Warning\n\n**規定**：\n軟體觸發的 IP reset（透過暫存器寫入）完成後，硬體必須提供 reset_done 狀態旗標供軟體輪詢或 interrupt 通知，禁止要求軟體以固定等待時間判斷 reset 是否完成。\n\n**違規範例**：\n\"After writing 1 to RST_CTRL[0], software must wait 1ms before accessing any IP registers.\"\n\n**合規範例**：\n\"After writing 1 to RST_CTRL[0], hardware will clear RST_CTRL[0] and set RST_STATUS[0] when the reset sequence is complete. Software polls RST_STATUS[0] before accessing IP registers.\"\n\n**原因**：\n固定等待時間在不同溫度、電壓、製程角（PVT corner）下不可靠，且浪費 CPU 時間；硬體握手機制是唯一可靠的做法。\n\n---",
+      "## RST-001 Reset Sequence Ordering\n\n**類別**：Reset\n**嚴重程度**：Critical\n\n**規定**：\n多個 IP 的 reset 釋放必須遵循以下強制順序：\n1. Clock 穩定（PLL lock）\n2. Memory（SRAM / register file）初始化完成\n3. Peripheral IP reset 釋放\n4. Master IP（CPU / DMA）reset 釋放\n\nMaster IP 的 reset 不得在 Peripheral IP 完成 reset 之前釋放。\n\n**違規範例**：\n\"The CPU reset and peripheral reset are released simultaneously after PLL lock.\"\n\"The DMA engine reset is released 10 clock cycles after PLL lock, before the DMAC register interface is initialized.\"\n\n**合規範例**：\n\"The CPU reset is released only after all peripheral IPs have completed their reset sequence and asserted their ready signals. The sequence is: PLL lock → peripheral reset release → peripheral ready → CPU reset release.\"\n\n**原因**：\n若 Master 在 Peripheral 尚未準備好前開始執行，初始化程式碼對 Peripheral 暫存器的第一筆存取將失敗，導致系統啟動失敗或進入不確定狀態。\n\n---",
+      "## RST-002 Reset Assert Duration\n\n**類別**：Reset\n**嚴重程度**：Warning\n\n**規定**：\nIP 的 reset 信號必須至少保持 assert 狀態 16 個目的時鐘週期，以確保所有內部狀態機和暫存器完全復位。\n\n**違規範例**：\n\"The IP reset is asserted for 2 clock cycles before being released.\"\n\n**合規範例**：\n\"The IP reset is asserted for a minimum of 16 clock cycles of the IP's operating clock before de-assertion.\"\n\n**原因**：\n部分內部狀態機（如多級 pipeline）需要多個時鐘週期才能達到確定的初始狀態，過短的 reset pulse 可能導致狀態機停留在未定義的中間狀態。\n\n---"
+    ],
+    "reference": "硬體必須提供 reset_done 狀態旗標（如 RST_STATUS）供軟體輪詢或 interrupt 通知，禁止使用固定等待時間，依據規則 RST-003。",
+    "scores": {
+      "context_precision": 1.0,
+      "context_recall": 1.0,
+      "faithfulness": 1.0,
+      "answer_relevancy": 0.9501
+    }
+  },
+  {
+    "question": "Power domain 處於 reset 狀態時，其輸出信號需要什麼保護？",
+    "answer": "根據規範內容，當一個 power domain 處於 reset 狀態時，該 domain 的所有輸出信號必須經過 isolation cell 箝位（clamp）為固定值（通常為 0 或 1）。\n\n**後果與影響：**\n若無 isolation cell 隔離，Power domain 在 reset 期間其輸出為未定義狀態（X 或浮接），X 狀態將傳播至 always-on domain，可能導致系統級功能錯誤或不必要的功耗。\n\n**原因：**\nPower domain 在 reset 期間其輸出為未定義狀態（X 或浮接），若無 isolation cell 隔離，X 狀態將傳播至 always-on domain，可能導致系統級功能錯誤或不必要的功耗。\n\n此規定依據 **RST-004 Isolation Cell Requirement During Power Domain Reset**。",
+    "contexts": [
+      "## CLK-004 Async Reset Synchronization\n\n**類別**：Clock / Reset\n**嚴重程度**：Critical\n\n**規定**：\n非同步 reset 信號在釋放（de-assert）時必須經過 reset synchronizer（至少兩級 FF），確保 reset 的釋放與目的時鐘同步。Reset 的 assert 可以是非同步的。\n\n**違規範例**：\n\"The global reset signal is directly de-asserted asynchronously across all clock domains simultaneously.\"\n\n**合規範例**：\n\"Each clock domain has a dedicated reset synchronizer. The reset synchronizer asserts reset asynchronously and de-asserts reset synchronously with the local clock after two FF stages.\"\n\n**原因**：\n非同步 reset 釋放可能在不同 FF 的 recovery time 邊界發生，導致部分邏輯退出 reset 而其他邏輯仍在 reset 狀態，造成系統狀態不一致（reset distribution skew 問題）。",
+      "## RST-004 Isolation Cell Requirement During Power Domain Reset\n\n**類別**：Reset / Power\n**嚴重程度**：Critical\n\n**規定**：\n當一個 power domain 處於 reset 或 power-off 狀態時，該 domain 的所有輸出信號必須經過 isolation cell 箝位（clamp）為固定值（通常為 0 或 1），防止 X 狀態或浮接信號傳播至 always-on domain。\n\n**違規範例**：\n\"The video encoder power domain outputs are directly connected to the display controller inputs without isolation cells.\"\n\n**合規範例**：\n\"All outputs from the video encoder power domain pass through ISO_AND isolation cells. The isolation enable signal is asserted before the power domain reset is asserted and de-asserted after power-up is complete.\"\n\n**原因**：\nPower domain 在 reset 或掉電期間其輸出為未定義狀態（X 或浮接），若無 isolation cell 隔離，X 狀態將傳播至 always-on domain，可能導致系統級功能錯誤或不必要的功耗。",
+      "## RST-002 Reset Assert Duration\n\n**類別**：Reset\n**嚴重程度**：Warning\n\n**規定**：\nIP 的 reset 信號必須至少保持 assert 狀態 16 個目的時鐘週期，以確保所有內部狀態機和暫存器完全復位。\n\n**違規範例**：\n\"The IP reset is asserted for 2 clock cycles before being released.\"\n\n**合規範例**：\n\"The IP reset is asserted for a minimum of 16 clock cycles of the IP's operating clock before de-assertion.\"\n\n**原因**：\n部分內部狀態機（如多級 pipeline）需要多個時鐘週期才能達到確定的初始狀態，過短的 reset pulse 可能導致狀態機停留在未定義的中間狀態。\n\n---"
+    ],
+    "reference": "必須經過 isolation cell 箝位為固定值，防止 X 狀態傳播至 always-on domain，依據規則 RST-004。",
+    "scores": {
+      "context_precision": 0.5,
+      "context_recall": 1.0,
+      "faithfulness": 0.75,
+      "answer_relevancy": 0.8212
+    }
+  },
+  {
+    "question": "如果 Spec 寫著「Software must wait 1ms before accessing IP registers after reset」，這違反哪條規則？",
+    "answer": "如果 Spec 寫著「Software must wait 1ms before accessing IP registers after reset」，這違反了 **RST-003 Software-Triggered Reset Completion Handshake** 規則。\n\n**後果與影響：**\n*   **系統不穩定或功能異常：** 由於固定等待時間在不同溫度、電壓、製程角（PVT corner）下不可靠，1ms 的等待時間可能在某些操作條件下過短，導致軟體在 IP 尚未完全復位完成時就開始存取其暫存器。這會導致 IP 處於未定義狀態，進而引發系統啟動失敗、功能異常或不可預期的行為。\n*   **資源浪費：** 若 1ms 的等待時間在某些條件下過長，則會不必要地浪費 CPU 時間，降低系統效率和響應速度。\n\n**原因：**\n*   **可靠性問題：** 根據 RST-003 的說明，固定等待時間在不同溫度、電壓、製程角（PVT corner）下是不可靠的。硬體復位完成所需的時間會因這些變數而異，單一的固定時間無法保證在所有情況下都足夠或不過長。\n*   **效率問題：** 固定等待時間會浪費 CPU 時間，因為 CPU 必須空閒等待，而不是執行其他有用的任務。\n*   **缺乏硬體握手：** 該規範要求硬體必須提供 reset_done 狀態旗標供軟體輪詢或 interrupt 通知，以確保軟體能夠精確地判斷 reset 何時完成，這是唯一可靠的做法。",
+    "contexts": [
+      "## RST-001 Reset Sequence Ordering\n\n**類別**：Reset\n**嚴重程度**：Critical\n\n**規定**：\n多個 IP 的 reset 釋放必須遵循以下強制順序：\n1. Clock 穩定（PLL lock）\n2. Memory（SRAM / register file）初始化完成\n3. Peripheral IP reset 釋放\n4. Master IP（CPU / DMA）reset 釋放\n\nMaster IP 的 reset 不得在 Peripheral IP 完成 reset 之前釋放。\n\n**違規範例**：\n\"The CPU reset and peripheral reset are released simultaneously after PLL lock.\"\n\"The DMA engine reset is released 10 clock cycles after PLL lock, before the DMAC register interface is initialized.\"\n\n**合規範例**：\n\"The CPU reset is released only after all peripheral IPs have completed their reset sequence and asserted their ready signals. The sequence is: PLL lock → peripheral reset release → peripheral ready → CPU reset release.\"\n\n**原因**：\n若 Master 在 Peripheral 尚未準備好前開始執行，初始化程式碼對 Peripheral 暫存器的第一筆存取將失敗，導致系統啟動失敗或進入不確定狀態。\n\n---",
+      "## RST-003 Software-Triggered Reset Completion Handshake\n\n**類別**：Reset\n**嚴重程度**：Warning\n\n**規定**：\n軟體觸發的 IP reset（透過暫存器寫入）完成後，硬體必須提供 reset_done 狀態旗標供軟體輪詢或 interrupt 通知，禁止要求軟體以固定等待時間判斷 reset 是否完成。\n\n**違規範例**：\n\"After writing 1 to RST_CTRL[0], software must wait 1ms before accessing any IP registers.\"\n\n**合規範例**：\n\"After writing 1 to RST_CTRL[0], hardware will clear RST_CTRL[0] and set RST_STATUS[0] when the reset sequence is complete. Software polls RST_STATUS[0] before accessing IP registers.\"\n\n**原因**：\n固定等待時間在不同溫度、電壓、製程角（PVT corner）下不可靠，且浪費 CPU 時間；硬體握手機制是唯一可靠的做法。\n\n---",
+      "## RST-002 Reset Assert Duration\n\n**類別**：Reset\n**嚴重程度**：Warning\n\n**規定**：\nIP 的 reset 信號必須至少保持 assert 狀態 16 個目的時鐘週期，以確保所有內部狀態機和暫存器完全復位。\n\n**違規範例**：\n\"The IP reset is asserted for 2 clock cycles before being released.\"\n\n**合規範例**：\n\"The IP reset is asserted for a minimum of 16 clock cycles of the IP's operating clock before de-assertion.\"\n\n**原因**：\n部分內部狀態機（如多級 pipeline）需要多個時鐘週期才能達到確定的初始狀態，過短的 reset pulse 可能導致狀態機停留在未定義的中間狀態。\n\n---"
+    ],
+    "reference": "違反 RST-003，因為軟體不得使用固定等待時間判斷 reset 完成，必須依賴硬體 handshake 或狀態旗標。",
+    "scores": {
+      "context_precision": 0.5,
+      "context_recall": 1.0,
+      "faithfulness": 0.8333,
+      "answer_relevancy": 0.9109
+    }
+  },
+  {
+    "question": "如果 Spec 寫著「CPU reset and peripheral reset are released simultaneously after PLL lock」，這違反哪條規則？",
+    "answer": "如果 Spec 寫著「CPU reset and peripheral reset are released simultaneously after PLL lock」，這違反了 **RST-001 Reset Sequence Ordering** 規則。\n\n**後果與影響**：\n若 Master IP（CPU）在 Peripheral IP 尚未準備好前開始執行，初始化程式碼對 Peripheral 暫存器的第一筆存取將失敗，導致系統啟動失敗或進入不確定狀態。\n\n**原因**：\n根據 RST-001 的規定，多個 IP 的 reset 釋放必須遵循強制順序，其中 Master IP（CPU / DMA）的 reset 釋放必須在 Peripheral IP reset 釋放之後。Master IP 的 reset 不得在 Peripheral IP 完成 reset 之前釋放。\n「CPU reset and peripheral reset are released simultaneously after PLL lock」這個描述直接違反了此規定，因為它沒有確保 Peripheral IP 的 reset 釋放並完成後，才釋放 Master IP 的 reset。這與 RST-001 提供的違規範例完全一致。",
+    "contexts": [
+      "## RST-001 Reset Sequence Ordering\n\n**類別**：Reset\n**嚴重程度**：Critical\n\n**規定**：\n多個 IP 的 reset 釋放必須遵循以下強制順序：\n1. Clock 穩定（PLL lock）\n2. Memory（SRAM / register file）初始化完成\n3. Peripheral IP reset 釋放\n4. Master IP（CPU / DMA）reset 釋放\n\nMaster IP 的 reset 不得在 Peripheral IP 完成 reset 之前釋放。\n\n**違規範例**：\n\"The CPU reset and peripheral reset are released simultaneously after PLL lock.\"\n\"The DMA engine reset is released 10 clock cycles after PLL lock, before the DMAC register interface is initialized.\"\n\n**合規範例**：\n\"The CPU reset is released only after all peripheral IPs have completed their reset sequence and asserted their ready signals. The sequence is: PLL lock → peripheral reset release → peripheral ready → CPU reset release.\"\n\n**原因**：\n若 Master 在 Peripheral 尚未準備好前開始執行，初始化程式碼對 Peripheral 暫存器的第一筆存取將失敗，導致系統啟動失敗或進入不確定狀態。\n\n---",
+      "## RST-002 Reset Assert Duration\n\n**類別**：Reset\n**嚴重程度**：Warning\n\n**規定**：\nIP 的 reset 信號必須至少保持 assert 狀態 16 個目的時鐘週期，以確保所有內部狀態機和暫存器完全復位。\n\n**違規範例**：\n\"The IP reset is asserted for 2 clock cycles before being released.\"\n\n**合規範例**：\n\"The IP reset is asserted for a minimum of 16 clock cycles of the IP's operating clock before de-assertion.\"\n\n**原因**：\n部分內部狀態機（如多級 pipeline）需要多個時鐘週期才能達到確定的初始狀態，過短的 reset pulse 可能導致狀態機停留在未定義的中間狀態。\n\n---",
+      "## RST-003 Software-Triggered Reset Completion Handshake\n\n**類別**：Reset\n**嚴重程度**：Warning\n\n**規定**：\n軟體觸發的 IP reset（透過暫存器寫入）完成後，硬體必須提供 reset_done 狀態旗標供軟體輪詢或 interrupt 通知，禁止要求軟體以固定等待時間判斷 reset 是否完成。\n\n**違規範例**：\n\"After writing 1 to RST_CTRL[0], software must wait 1ms before accessing any IP registers.\"\n\n**合規範例**：\n\"After writing 1 to RST_CTRL[0], hardware will clear RST_CTRL[0] and set RST_STATUS[0] when the reset sequence is complete. Software polls RST_STATUS[0] before accessing IP registers.\"\n\n**原因**：\n固定等待時間在不同溫度、電壓、製程角（PVT corner）下不可靠，且浪費 CPU 時間；硬體握手機制是唯一可靠的做法。\n\n---"
+    ],
+    "reference": "違反 RST-001，因為 Master IP（CPU）reset 不得在 Peripheral IP 完成 reset 並assert ready 之前釋放。",
+    "scores": {
+      "context_precision": 1.0,
+      "context_recall": 1.0,
+      "faithfulness": 1.0,
+      "answer_relevancy": 0.6074
+    }
+  },
+  {
+    "question": "當一個 power domain 的輸出直接連接到 always-on domain 且沒有 isolation cell，會造成什麼風險？",
+    "answer": "當一個 power domain 的輸出直接連接到 always-on domain 且沒有 isolation cell 時，會造成以下風險：\n\n**後果與影響：**\n*   X 狀態或浮接信號將傳播至 always-on domain。\n*   可能導致系統級功能錯誤。\n*   可能導致不必要的功耗。\n\n**原因：**\n*   根據 **RST-004** 規定，power domain 在 reset 或掉電期間其輸出為未定義狀態（X 或浮接）。若無 isolation cell 隔離，這些未定義狀態（X 或浮接）將傳播至 always-on domain，進而引發上述功能錯誤或功耗問題。",
+    "contexts": [
+      "## RST-004 Isolation Cell Requirement During Power Domain Reset\n\n**類別**：Reset / Power\n**嚴重程度**：Critical\n\n**規定**：\n當一個 power domain 處於 reset 或 power-off 狀態時，該 domain 的所有輸出信號必須經過 isolation cell 箝位（clamp）為固定值（通常為 0 或 1），防止 X 狀態或浮接信號傳播至 always-on domain。\n\n**違規範例**：\n\"The video encoder power domain outputs are directly connected to the display controller inputs without isolation cells.\"\n\n**合規範例**：\n\"All outputs from the video encoder power domain pass through ISO_AND isolation cells. The isolation enable signal is asserted before the power domain reset is asserted and de-asserted after power-up is complete.\"\n\n**原因**：\nPower domain 在 reset 或掉電期間其輸出為未定義狀態（X 或浮接），若無 isolation cell 隔離，X 狀態將傳播至 always-on domain，可能導致系統級功能錯誤或不必要的功耗。",
+      "## CLK-001 Synchronizer Requirement for Single-bit Signals\n\n**類別**：Clock\n**嚴重程度**：Critical\n\n**規定**：\n跨時鐘域的單 bit 控制信號（enable、valid、request 等）必須經過至少兩級 D flip-flop synchronizer，且兩級 FF 必須使用目的時鐘域的時鐘驅動。\n\n**違規範例**：\n\"The request signal is directly connected from the 200MHz domain to the 100MHz domain.\"\n\"The enable signal passes through a single FF before entering the 400MHz clock domain.\"\n\n**合規範例**：\n\"The request signal passes through a 2-stage synchronizer clocked by the destination 100MHz clock before entering the 100MHz domain.\"\n\n**原因**：\n單級 synchronizer 無法將亞穩態（metastability）發生機率降至可接受水準（< 1 failure per 10 years），兩級為業界最低標準。\n\n---",
+      "## AXI-001 Burst Mode Support\n\n**類別**：Interface\n**嚴重程度**：Critical\n\n**規定**：\n所有 AXI4 Master 介面必須同時支援 INCR 和 WRAP 兩種 burst 模式。\n\n**違規範例**：\n\"The master interface supports INCR burst mode only.\"\n\n**合規範例**：\n\"The master interface supports both INCR and WRAP burst modes as required by AXI4 specification.\"\n\n**原因**：\n公司 legacy cache IP（L2C-310）使用 WRAP burst 進行 cache line fill，若 Master 不支援 WRAP 模式將導致與 cache 子系統不相容，產生功能錯誤。\n\n---"
+    ],
+    "reference": "Power domain 在 reset 或掉電期間輸出為未定義狀態（X），若無 isolation cell 隔離，X 狀態將傳播至 always-on domain，可能導致系統功能錯誤或額外功耗，依據規則 RST-004。",
+    "scores": {
+      "context_precision": 1.0,
+      "context_recall": 1.0,
+      "faithfulness": 1.0,
+      "answer_relevancy": 0.8698
+    }
+  }
+]

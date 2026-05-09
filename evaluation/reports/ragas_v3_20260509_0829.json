@@ -1,0 +1,15 @@
+{
+  "version": "v3",
+  "timestamp": "20260509_0829",
+  "total_questions": 20,
+  "scores": {
+    "llm_context_precision_with_reference": 0.8667,
+    "context_recall": 1.0,
+    "faithfulness": 0.9131,
+    "answer_relevancy": 0.8057
+  },
+  "threshold": {
+    "context_recall": 0.75,
+    "passed": true
+  }
+}
