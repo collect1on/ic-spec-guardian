@@ -1,0 +1,97 @@
+{
+  "timestamp": "20260511_0200",
+  "summary": {
+    "total_specs": 2,
+    "avg_precision": 1.0,
+    "avg_recall": 1.0,
+    "avg_f1": 1.0
+  },
+  "details": [
+    {
+      "spec_name": "violation_spec",
+      "description": "包含 3 個明確違規的測試 Spec",
+      "expected": [
+        "CLK-001",
+        "AXI-001",
+        "RST-001"
+      ],
+      "found": [
+        "CLK-001",
+        "AXI-001",
+        "RST-001"
+      ],
+      "correctly_found": [
+        "CLK-001",
+        "AXI-001",
+        "RST-001"
+      ],
+      "missed": [],
+      "false_alarms": [],
+      "metrics": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "tp": 3,
+        "fp": 0,
+        "fn": 0
+      },
+      "all_issues": [
+        {
+          "section": "2. AXI Interface Specification",
+          "rule_violated": "AXI-001",
+          "description": "AXI4 Master 介面僅支援 INCR burst 模式，但規則 AXI-001 規定所有 AXI4 Master 介面必須同時支援 INCR 和 WRAP 兩種 burst 模式。",
+          "suggestion": "AXI4 Master 介面必須修改以支援 INCR 和 WRAP 兩種 burst 模式，以符合 AXI-001 規定並確保與公司 legacy cache IP (L2C-310) 的相容性。",
+          "severity": "critical",
+          "confidence": 1.0,
+          "requires_human_review": false
+        },
+        {
+          "section": "3. Clock Domain Crossing Architecture",
+          "rule_violated": "CLK-001",
+          "description": "The DMA request signal, a single-bit control signal crossing from the 500MHz domain to the 100MHz domain, is synchronized using only a single DFF synchronizer stage. Rule CLK-001 explicitly requires single-bit control signals crossing clock domains to pass through at least a two-stage D flip-flop synchronizer.",
+          "suggestion": "The DMA request signal must be synchronized using at least a two-stage D flip-flop synchronizer. Both D flip-flops should be clocked by the destination 100MHz clock to ensure proper metastability resolution and reduce the probability of failure to an acceptable level.",
+          "severity": "critical",
+          "confidence": 1.0,
+          "requires_human_review": false
+        },
+        {
+          "section": "4. Power & Reset Sequence",
+          "rule_violated": "RST-001",
+          "description": "規則 RST-001 規定 Master IP (CPU / DMA) 的 reset 不得在 Peripheral IP 完成 reset 之前釋放，且合規範例明確指出 Master IP reset 應在 Peripheral IP reset 釋放並確認其已準備就緒後才釋放。然而，待審查的 Spec 章節說明 Master IP 和 Peripheral IP 的 reset 是在 Peripheral 初始化完成後同時釋放 ('Master and peripheral resets are released simultaneously once peripheral initialization completes')。同時釋放不符合 Master IP reset 必須在 Peripheral IP reset 之後釋放的強制順序要求。",
+          "suggestion": "修改 reset 釋放順序，確保 Master IP (CPU / DMA) 的 reset 在 Peripheral IP 的 reset 釋放並確認其已準備就緒（例如透過 ready 訊號）之後才釋放，而非同時釋放。",
+          "severity": "critical",
+          "confidence": 1.0,
+          "requires_human_review": false
+        }
+      ]
+    },
+    {
+      "spec_name": "compliant_spec",
+      "description": "完全合規的測試 Spec，不應有任何 Critical 違規",
+      "expected": [],
+      "found": [],
+      "correctly_found": [],
+      "missed": [],
+      "false_alarms": [],
+      "metrics": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "tp": 0,
+        "fp": 0,
+        "fn": 0
+      },
+      "all_issues": [
+        {
+          "section": "3. Clock Domain Crossing Architecture",
+          "rule_violated": "CLK-004",
+          "description": "規範中提到「dedicated reset synchronizer chain」，但未明確指出該鏈條包含「至少兩級 FF」，這不完全符合規則 CLK-004 中對 reset synchronizer 必須至少兩級 FF 的要求。若該鏈條少於兩級 FF，則會違反規定。",
+          "suggestion": "請明確指出 reset synchronizer chain 包含至少兩級 D flip-flop，例如：「a dedicated 2-stage reset synchronizer chain」。",
+          "severity": "warning",
+          "confidence": 0.8,
+          "requires_human_review": true
+        }
+      ]
+    }
+  ]
+}

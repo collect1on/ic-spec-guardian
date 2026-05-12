@@ -4,10 +4,10 @@ from typing import TypedDict, Annotated
 import operator
 import sys
 from pathlib import Path
-
+from services.agent_service.tracing import traced_compliance_llm_call
 repo_root = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(repo_root))
-
+from services.agent_service.tracing import traced_compliance_llm_call
 from services.retrieval_service.retriever import hybrid_search
 from services.agent_service.tools import (
     split_into_sections,
@@ -40,29 +40,65 @@ def parse_spec_node(state: ReviewState) -> dict:
     }
 
 
+# def check_compliance_node(state: ReviewState) -> dict:
+#     """Node 2：對當前章節做合規檢查"""
+#     idx = state["current_section_index"]
+#     section = state["spec_sections"][idx]
+
+#     print(f"   🔍 檢查章節 [{idx+1}/{len(state['spec_sections'])}]：{section['heading']}")
+
+#     # 搜尋相關規則
+#     relevant_rules = hybrid_search(section["text"], top_k=3)
+
+#     # LLM 判斷
+#     result = compliance_llm_call(section["text"], relevant_rules)
+
+#     issues = []
+#     if result.get("has_violation"):
+#         severity = "critical" if result.get("confidence", 0) > 0.8 else "warning"
+#         issues.append({
+#             "section":              section["heading"],
+#             "rule_violated":        result.get("rule_id"),
+#             "description":          result.get("description"),
+#             "suggestion":           result.get("suggestion"),
+#             "severity":             severity,
+#             "confidence":           result.get("confidence"),
+#             "requires_human_review": result.get("requires_human_review", False)
+#         })
+#         print(f"      ⚠️  發現違規：{result.get('rule_id')}")
+#     else:
+#         print(f"      ✅ 無違規")
+
+#     return {
+#         "issues_found": issues,
+#         "current_section_index": idx + 1
+#     }
+
 def check_compliance_node(state: ReviewState) -> dict:
-    """Node 2：對當前章節做合規檢查"""
     idx = state["current_section_index"]
     section = state["spec_sections"][idx]
 
     print(f"   🔍 檢查章節 [{idx+1}/{len(state['spec_sections'])}]：{section['heading']}")
 
-    # 搜尋相關規則
     relevant_rules = hybrid_search(section["text"], top_k=3)
 
-    # LLM 判斷
-    result = compliance_llm_call(section["text"], relevant_rules)
-
+    # 換成 traced 版本
+    #result = traced_compliance_llm_call(section["text"], relevant_rules)
+    result = traced_compliance_llm_call(
+    section["text"],
+    relevant_rules,
+    section_heading=section["heading"]  # 新增這個
+    )
     issues = []
     if result.get("has_violation"):
         severity = "critical" if result.get("confidence", 0) > 0.8 else "warning"
         issues.append({
-            "section":              section["heading"],
-            "rule_violated":        result.get("rule_id"),
-            "description":          result.get("description"),
-            "suggestion":           result.get("suggestion"),
-            "severity":             severity,
-            "confidence":           result.get("confidence"),
+            "section":               section["heading"],
+            "rule_violated":         result.get("rule_id"),
+            "description":           result.get("description"),
+            "suggestion":            result.get("suggestion"),
+            "severity":              severity,
+            "confidence":            result.get("confidence"),
             "requires_human_review": result.get("requires_human_review", False)
         })
         print(f"      ⚠️  發現違規：{result.get('rule_id')}")
@@ -70,11 +106,9 @@ def check_compliance_node(state: ReviewState) -> dict:
         print(f"      ✅ 無違規")
 
     return {
-        "issues_found": issues,
+        "issues_found":          issues,
         "current_section_index": idx + 1
     }
-
-
 def generate_report_node(state: ReviewState) -> dict:
     """Node 3：彙整所有問題，產出報告"""
     report = format_report(state["issues_found"], state.get("spec_name", "Spec"))
