@@ -12,21 +12,51 @@ load_dotenv()
 # ── LLM 初始化 ──────────────────────────────────────────────
 def get_llm():
     return ChatGoogleGenerativeAI(
-        model="gemini-2.5-flash",
+        model="gemini-2.5-flash-lite",
         google_api_key=os.getenv("GOOGLE_API_KEY"),
         temperature=0,
     )
 
-# ── Spec 解析 ────────────────────────────────────────────────
+# # ── Spec 解析 ────────────────────────────────────────────────
+# def split_into_sections(spec_content: str) -> list[dict]:
+#     """把 Spec 文字依標題切成章節"""
+#     sections = []
+#     current_heading = "Overview"
+#     current_lines = []
+
+#     for line in spec_content.split("\n"):
+#         if re.match(r"^#{1,3} ", line):
+#             if current_lines:
+#                 text = "\n".join(current_lines).strip()
+#                 if text:
+#                     sections.append({
+#                         "heading": current_heading,
+#                         "text": text
+#                     })
+#             current_heading = line.lstrip("#").strip()
+#             current_lines = []
+#         else:
+#             current_lines.append(line)
+
+#     # 最後一個章節
+#     if current_lines:
+#         text = "\n".join(current_lines).strip()
+#         if text:
+#             sections.append({
+#                 "heading": current_heading,
+#                 "text": text
+#             })
+
+#     return sections
+
 def split_into_sections(spec_content: str) -> list[dict]:
-    """把 Spec 文字依標題切成章節"""
     sections = []
-    current_heading = "Overview"
+    current_heading = None
     current_lines = []
 
     for line in spec_content.split("\n"):
-        if re.match(r"^#{1,3} ", line):
-            if current_lines:
+        if re.match(r"^## ", line):          # ← 只切 ## 層級
+            if current_heading and current_lines:
                 text = "\n".join(current_lines).strip()
                 if text:
                     sections.append({
@@ -35,11 +65,13 @@ def split_into_sections(spec_content: str) -> list[dict]:
                     })
             current_heading = line.lstrip("#").strip()
             current_lines = []
+        elif re.match(r"^# ", line):          # ← # 層級直接忽略
+            pass
         else:
             current_lines.append(line)
 
     # 最後一個章節
-    if current_lines:
+    if current_heading and current_lines:
         text = "\n".join(current_lines).strip()
         if text:
             sections.append({
@@ -48,7 +80,6 @@ def split_into_sections(spec_content: str) -> list[dict]:
             })
 
     return sections
-
 
 # ── LLM 合規判斷 ─────────────────────────────────────────────
 def compliance_llm_call(spec_section: str, relevant_rules: list[dict]) -> dict:
@@ -107,30 +138,57 @@ def parse_llm_response(raw: str) -> dict:
     return result
 
 
-# ── 報告生成 ─────────────────────────────────────────────────
-def format_report(issues: list[dict], spec_name: str = "待審查 Spec") -> str:
-    """把所有 issues 彙整成可讀報告"""
+# # ── 報告生成 ─────────────────────────────────────────────────
+# def format_report(issues: list[dict], spec_name: str = "待審查 Spec") -> str:
+#     """把所有 issues 彙整成可讀報告"""
+#     if not issues:
+#         return f"✅ {spec_name} 審查完成：未發現任何合規問題。"
+
+#     critical = [i for i in issues if i.get("severity") == "critical"]
+#     warning  = [i for i in issues if i.get("severity") != "critical"]
+
+#     lines = [
+#         f"⚠️ {spec_name} 審查報告",
+#         f"發現 {len(issues)} 個問題（Critical: {len(critical)}, Warning: {len(warning)}）",
+#         "=" * 50
+#     ]
+
+#     for i, issue in enumerate(issues, 1):
+#         lines += [
+#             f"\n[問題 {i}] {'🔴 Critical' if issue.get('severity') == 'critical' else '🟡 Warning'}",
+#             f"章節：{issue.get('section', 'N/A')}",
+#             f"違反規則：{issue.get('rule_violated', 'N/A')}",
+#             f"描述：{issue.get('description', 'N/A')}",
+#             f"建議：{issue.get('suggestion', 'N/A')}",
+#         ]
+#         if issue.get("requires_human_review"):
+#             lines.append("⚠️ 建議人工確認")
+
+#     return "\n".join(lines)
+def format_report(issues: list[dict], spec_name: str = "Spec") -> str:
     if not issues:
         return f"✅ {spec_name} 審查完成：未發現任何合規問題。"
 
-    critical = [i for i in issues if i.get("severity") == "critical"]
-    warning  = [i for i in issues if i.get("severity") != "critical"]
-
     lines = [
         f"⚠️ {spec_name} 審查報告",
-        f"發現 {len(issues)} 個問題（Critical: {len(critical)}, Warning: {len(warning)}）",
+        f"發現 {len(issues)} 個問題",
         "=" * 50
     ]
 
     for i, issue in enumerate(issues, 1):
+        status = issue.get("status", "violation")
+        confirmed_by = "人工確認" if status == "confirmed" else "高信心違規"
+        rule = issue.get("rule_id") or issue.get("rule_violated", "N/A")
+
         lines += [
-            f"\n[問題 {i}] {'🔴 Critical' if issue.get('severity') == 'critical' else '🟡 Warning'}",
+            f"\n[問題 {i}] {confirmed_by}",
             f"章節：{issue.get('section', 'N/A')}",
-            f"違反規則：{issue.get('rule_violated', 'N/A')}",
+            f"違反規則：{rule}",
             f"描述：{issue.get('description', 'N/A')}",
             f"建議：{issue.get('suggestion', 'N/A')}",
+            f"信心分數：{issue.get('confidence', 0):.2f}",
         ]
-        if issue.get("requires_human_review"):
-            lines.append("⚠️ 建議人工確認")
+        if issue.get("human_note"):
+            lines.append(f"工程師備注：{issue['human_note']}")
 
     return "\n".join(lines)

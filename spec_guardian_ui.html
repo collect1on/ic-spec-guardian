@@ -1,0 +1,1023 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IC Spec Guardian</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap');
+
+  :root {
+    --bg:        #0a0c0f;
+    --bg2:       #111318;
+    --bg3:       #181c23;
+    --border:    #252a35;
+    --border2:   #2e3440;
+    --accent:    #00d4ff;
+    --accent2:   #0099cc;
+    --green:     #00ff88;
+    --yellow:    #ffcc00;
+    --red:       #ff4455;
+    --text:      #e2e8f0;
+    --text2:     #8892a4;
+    --text3:     #4a5568;
+    --mono:      'IBM Plex Mono', monospace;
+    --sans:      'IBM Plex Sans', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    display: grid;
+    grid-template-rows: auto 1fr;
+    overflow-x: hidden;
+  }
+
+  header {
+    border-bottom: 1px solid var(--border);
+    padding: 0 32px;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    background: var(--bg2);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .logo {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    color: var(--accent);
+    text-transform: uppercase;
+  }
+  .logo span { color: var(--text2); }
+  .status-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--text3);
+    margin-left: auto;
+    transition: background 0.3s;
+  }
+  .status-dot.online { background: var(--green); box-shadow: 0 0 8px var(--green); }
+  .status-label {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text2);
+    letter-spacing: 0.08em;
+  }
+
+  main {
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    height: calc(100vh - 56px);
+    overflow: hidden;
+  }
+
+  .left-panel {
+    border-right: 1px solid var(--border);
+    background: var(--bg2);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+  }
+
+  .panel-section {
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border);
+  }
+  .panel-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    color: var(--text3);
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+
+  .upload-zone {
+    border: 1px dashed var(--border2);
+    border-radius: 4px;
+    padding: 24px 16px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+    background: var(--bg3);
+  }
+  .upload-zone:hover, .upload-zone.dragover {
+    border-color: var(--accent);
+    background: rgba(0,212,255,0.04);
+  }
+  .upload-zone input {
+    position: absolute; inset: 0;
+    opacity: 0; cursor: pointer; width: 100%; height: 100%;
+  }
+  .upload-icon { font-size: 24px; margin-bottom: 8px; display: block; }
+  .upload-text { font-size: 12px; color: var(--text2); line-height: 1.6; }
+  .upload-text strong { color: var(--accent); font-weight: 500; }
+
+  .file-selected {
+    display: none;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    background: var(--bg3);
+    border: 1px solid var(--border2);
+    border-radius: 4px;
+    margin-top: 10px;
+  }
+  .file-selected.show { display: flex; }
+  .file-icon { font-size: 18px; }
+  .file-info { flex: 1; min-width: 0; }
+  .file-name {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .file-size { font-size: 10px; color: var(--text3); margin-top: 2px; }
+  .file-clear {
+    background: none; border: none; color: var(--text3);
+    cursor: pointer; font-size: 16px; padding: 2px 4px;
+    transition: color 0.2s;
+  }
+  .file-clear:hover { color: var(--red); }
+
+  .input-field {
+    width: 100%;
+    background: var(--bg3);
+    border: 1px solid var(--border2);
+    border-radius: 4px;
+    padding: 8px 12px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .input-field:focus { border-color: var(--accent); }
+
+  .btn-primary {
+    width: 100%;
+    padding: 12px;
+    background: var(--accent);
+    color: #000;
+    border: none;
+    border-radius: 4px;
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+  .btn-primary:hover:not(:disabled) {
+    background: #33ddff;
+    box-shadow: 0 0 20px rgba(0,212,255,0.3);
+  }
+  .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .progress-wrap { display: none; flex-direction: column; gap: 8px; }
+  .progress-wrap.show { display: flex; }
+  .progress-bar-track { height: 3px; background: var(--border2); border-radius: 2px; overflow: hidden; }
+  .progress-bar-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+    transition: width 0.4s ease;
+    width: 0%;
+  }
+  .progress-text { font-family: var(--mono); font-size: 10px; color: var(--text2); }
+
+  .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .stat-box {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 10px 12px;
+  }
+  .stat-value {
+    font-family: var(--mono);
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--text);
+    line-height: 1;
+  }
+  .stat-value.red { color: var(--red); }
+  .stat-value.yellow { color: var(--yellow); }
+  .stat-value.green { color: var(--green); }
+  .stat-label { font-size: 10px; color: var(--text3); margin-top: 4px; letter-spacing: 0.05em; }
+
+  .right-panel { display: flex; flex-direction: column; overflow: hidden; }
+
+  .tab-bar {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg2);
+    padding: 0 24px;
+  }
+  .tab {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    color: var(--text3);
+    padding: 14px 16px 12px;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+    text-transform: uppercase;
+  }
+  .tab:hover { color: var(--text2); }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .tab-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px; height: 16px;
+    background: var(--red);
+    border-radius: 50%;
+    font-size: 9px;
+    color: #fff;
+    font-weight: 600;
+    margin-left: 6px;
+    vertical-align: middle;
+  }
+  .tab-badge.yellow { background: var(--yellow); color: #000; }
+
+  .panel-content { flex: 1; overflow-y: auto; padding: 24px; }
+
+  .tab-pane { display: none; }
+  .tab-pane.active { display: block; }
+
+  .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 300px;
+    color: var(--text3);
+    text-align: center;
+    gap: 12px;
+  }
+  .empty-icon { font-size: 40px; opacity: 0.4; }
+  .empty-text { font-size: 13px; line-height: 1.6; }
+
+  .issue-card {
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    margin-bottom: 12px;
+    background: var(--bg2);
+    transition: border-color 0.2s;
+    animation: slideIn 0.3s ease;
+  }
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .issue-card.pending   { border-left: 3px solid var(--yellow); }
+  .issue-card.violation { border-left: 3px solid var(--red); }
+  .issue-card.confirmed { border-left: 3px solid var(--green); opacity: 0.7; }
+  .issue-card.rejected  { border-left: 3px solid var(--text3); opacity: 0.5; }
+
+  .issue-header {
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--bg3);
+  }
+  .issue-badge {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 3px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .badge-pending   { background: rgba(255,204,0,0.15);  color: var(--yellow); }
+  .badge-violation { background: rgba(255,68,85,0.15);  color: var(--red); }
+  .badge-confirmed { background: rgba(0,255,136,0.15);  color: var(--green); }
+  .badge-rejected  { background: rgba(74,85,104,0.2);   color: var(--text3); }
+
+  .issue-rule { font-family: var(--mono); font-size: 11px; color: var(--text2); margin-left: auto; }
+  .issue-confidence { font-family: var(--mono); font-size: 10px; color: var(--text3); }
+
+  .issue-body { padding: 14px 16px; }
+  .issue-section-name {
+    font-size: 12px;
+    color: var(--text2);
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .issue-section-name::before { content: 'S.'; color: var(--text3); font-family: var(--mono); }
+  .issue-desc { font-size: 13px; color: var(--text); line-height: 1.6; margin-bottom: 10px; }
+  .issue-suggest {
+    font-size: 12px;
+    color: var(--text2);
+    line-height: 1.6;
+    padding: 8px 12px;
+    background: var(--bg3);
+    border-radius: 4px;
+    border-left: 2px solid var(--accent2);
+  }
+  .issue-suggest::before { content: 'Suggest: '; color: var(--accent2); font-weight: 500; }
+
+  .issue-actions {
+    padding: 12px 16px;
+    display: flex;
+    gap: 8px;
+    border-top: 1px solid var(--border);
+    background: var(--bg);
+  }
+  .btn-action {
+    flex: 1;
+    padding: 8px 12px;
+    border-radius: 4px;
+    border: 1px solid;
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+  }
+  .btn-confirm { background: rgba(0,255,136,0.08); border-color: var(--green); color: var(--green); }
+  .btn-confirm:hover { background: rgba(0,255,136,0.18); box-shadow: 0 0 12px rgba(0,255,136,0.2); }
+  .btn-reject  { background: rgba(255,68,85,0.08);  border-color: var(--red);   color: var(--red); }
+  .btn-reject:hover  { background: rgba(255,68,85,0.18);  box-shadow: 0 0 12px rgba(255,68,85,0.2); }
+
+  .hitl-submit-bar {
+    display: none;
+    padding: 16px 24px;
+    border-top: 1px solid var(--border);
+    background: var(--bg2);
+    align-items: center;
+    gap: 12px;
+  }
+  .hitl-submit-bar.show { display: flex; }
+  .hitl-progress-text { font-family: var(--mono); font-size: 11px; color: var(--text2); flex: 1; }
+  .btn-submit-hitl {
+    padding: 10px 24px;
+    background: var(--yellow);
+    color: #000;
+    border: none;
+    border-radius: 4px;
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-submit-hitl:hover:not(:disabled) { background: #ffe033; box-shadow: 0 0 16px rgba(255,204,0,0.3); }
+  .btn-submit-hitl:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .report-box {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 20px 24px;
+    font-family: var(--mono);
+    font-size: 12px;
+    line-height: 1.8;
+    color: var(--text);
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  .log-entry {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text2);
+    padding: 4px 0;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    gap: 12px;
+  }
+  .log-time { color: var(--text3); min-width: 80px; }
+  .log-msg.ok   { color: var(--green); }
+  .log-msg.err  { color: var(--red); }
+  .log-msg.warn { color: var(--yellow); }
+  .log-msg.info { color: var(--accent); }
+
+  .spinner {
+    width: 14px; height: 14px;
+    border: 2px solid rgba(0,212,255,0.2);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    display: none;
+  }
+  .spinner.show { display: block; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--text3); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">IC Spec <span>//</span> Guardian</div>
+  <div class="spinner" id="globalSpinner"></div>
+  <div class="status-label" id="statusLabel">Offline</div>
+  <div class="status-dot" id="statusDot"></div>
+</header>
+
+<main>
+  <div class="left-panel">
+
+    <div class="panel-section">
+      <div class="panel-label">Spec File</div>
+      <div class="upload-zone" id="uploadZone">
+        <input type="file" id="fileInput" accept=".md,.txt,.pdf">
+        <span class="upload-icon">[DOC]</span>
+        <div class="upload-text">
+          <strong>Click to select file</strong><br>
+          Supports .md / .txt / .pdf
+        </div>
+      </div>
+      <div class="file-selected" id="fileSelected">
+        <span class="file-icon">[F]</span>
+        <div class="file-info">
+          <div class="file-name" id="fileName">--</div>
+          <div class="file-size" id="fileSize">--</div>
+        </div>
+        <button class="file-clear" id="fileClear" title="Remove">X</button>
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <div class="panel-label">Thread ID</div>
+      <input class="input-field" type="text" id="threadId"
+             placeholder="review-001" value="review-001">
+    </div>
+
+    <div class="panel-section">
+      <div class="panel-label">API Endpoint</div>
+      <input class="input-field" type="text" id="apiBase"
+             placeholder="http://localhost:8002" value="http://localhost:8002">
+    </div>
+
+    <div class="panel-section">
+      <button class="btn-primary" id="startBtn" disabled>
+        <span id="startBtnText">Start Review</span>
+      </button>
+      <div class="progress-wrap" id="progressWrap" style="margin-top:12px">
+        <div class="progress-bar-track">
+          <div class="progress-bar-fill" id="progressFill"></div>
+        </div>
+        <div class="progress-text" id="progressText">Processing...</div>
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <div class="panel-label">Statistics</div>
+      <div class="stats-grid">
+        <div class="stat-box">
+          <div class="stat-value red" id="statViolation">--</div>
+          <div class="stat-label">High-conf violations</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-value yellow" id="statPending">--</div>
+          <div class="stat-label">Pending review</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-value green" id="statConfirmed">--</div>
+          <div class="stat-label">Confirmed</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-value" id="statRejected">--</div>
+          <div class="stat-label">Rejected</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="right-panel">
+
+    <div class="tab-bar">
+      <div class="tab active" data-tab="issues">
+        Issues
+        <span class="tab-badge yellow" id="pendingBadge" style="display:none">0</span>
+      </div>
+      <div class="tab" data-tab="violations">
+        Violations
+        <span class="tab-badge" id="violationBadge" style="display:none">0</span>
+      </div>
+      <div class="tab" data-tab="report">Report</div>
+      <div class="tab" data-tab="log">Log</div>
+    </div>
+
+    <div class="panel-content">
+
+      <div class="tab-pane active" id="tab-issues">
+        <div class="empty-state" id="issuesEmpty">
+          <div class="empty-icon">[SCAN]</div>
+          <div class="empty-text">Upload a Spec file then<br>click Start Review</div>
+        </div>
+        <div id="issuesList"></div>
+      </div>
+
+      <div class="tab-pane" id="tab-violations">
+        <div class="empty-state" id="violationsEmpty">
+          <div class="empty-icon">[OK]</div>
+          <div class="empty-text">No high-confidence violations found</div>
+        </div>
+        <div id="violationsList"></div>
+      </div>
+
+      <div class="tab-pane" id="tab-report">
+        <div class="empty-state" id="reportEmpty">
+          <div class="empty-icon">[RPT]</div>
+          <div class="empty-text">Report will appear after review completes</div>
+        </div>
+        <pre class="report-box" id="reportBox" style="display:none"></pre>
+        <button id="downloadBtn" class="btn-primary" style="display:none; margin-top:16px">Download Report</button>
+      </div>
+
+      <div class="tab-pane" id="tab-log">
+        <div id="logList">
+          <div class="empty-state">
+            <div class="empty-icon">[LOG]</div>
+            <div class="empty-text">Operation log</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="hitl-submit-bar" id="hitlBar">
+      <div class="hitl-progress-text" id="hitlProgressText">Please make decisions on all pending items</div>
+      <button class="btn-submit-hitl" id="submitHitlBtn" disabled>Submit Decisions</button>
+    </div>
+
+  </div>
+</main>
+
+<script>
+const API    = () => document.getElementById('apiBase').value.replace(/\/$/, '');
+const THREAD = () => document.getElementById('threadId').value.trim() || 'review-001';
+
+let selectedFile     = null;
+let specContent      = '';
+let pendingDecisions = {};
+let pendingItems     = [];
+let currentThread    = '';
+
+// ─────────────────────────────────────────────────────────────
+// KEY FIX: Deduplicate an array of issues by (section, rule_id).
+// When the backend's issues_found accumulates duplicates due to
+// LangGraph operator.add replaying after interrupt/resume,
+// this ensures the UI only displays one card per unique pair.
+// Priority order: confirmed > violation > pending_review > auto_passed
+// ─────────────────────────────────────────────────────────────
+function deduplicateIssues(items) {
+  const priority = { confirmed: 4, violation: 3, pending_review: 2, auto_passed: 1 };
+  const merged   = new Map();
+
+  for (const item of items) {
+    const key      = `${item.section || ''}||${item.rule_id || ''}`;
+    const existing = merged.get(key);
+    const itemPri  = priority[item.status] ?? 0;
+    const exPri    = existing ? (priority[existing.status] ?? 0) : -1;
+
+    if (!existing || itemPri > exPri) {
+      merged.set(key, item);
+    }
+  }
+
+  return Array.from(merged.values());
+}
+
+// ── File Handling ──────────────────────────────────────────
+const fileInput    = document.getElementById('fileInput');
+const uploadZone   = document.getElementById('uploadZone');
+const fileSelected = document.getElementById('fileSelected');
+
+fileInput.addEventListener('change', e => handleFile(e.target.files[0]));
+document.getElementById('fileClear').addEventListener('click', clearFile);
+
+uploadZone.addEventListener('dragover', e => {
+  e.preventDefault();
+  uploadZone.classList.add('dragover');
+});
+uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('dragover'));
+uploadZone.addEventListener('drop', e => {
+  e.preventDefault();
+  uploadZone.classList.remove('dragover');
+  handleFile(e.dataTransfer.files[0]);
+});
+
+function handleFile(file) {
+  if (!file) return;
+  selectedFile = file;
+  document.getElementById('fileName').textContent = file.name;
+  document.getElementById('fileSize').textContent = formatBytes(file.size);
+  fileSelected.classList.add('show');
+
+  const reader = new FileReader();
+  reader.onload = e => {
+    specContent = e.target.result;
+    document.getElementById('startBtn').disabled = false;
+    log('info', `Loaded: ${file.name} (${formatBytes(file.size)})`);
+  };
+  reader.readAsText(file);
+}
+
+function clearFile() {
+  selectedFile = null;
+  specContent  = '';
+  fileInput.value = '';
+  fileSelected.classList.remove('show');
+  document.getElementById('startBtn').disabled = true;
+}
+
+function formatBytes(b) {
+  if (b < 1024)    return b + ' B';
+  if (b < 1048576) return (b / 1024).toFixed(1) + ' KB';
+  return (b / 1048576).toFixed(1) + ' MB';
+}
+
+// ── Tabs ──────────────────────────────────────────────────
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
+  });
+});
+
+// ── API Health Check ───────────────────────────────────────
+async function checkHealth() {
+  try {
+    const r = await fetch(API() + '/docs', { signal: AbortSignal.timeout(2000) });
+    setOnline(r.ok);
+  } catch { setOnline(false); }
+}
+function setOnline(on) {
+  document.getElementById('statusDot').className  = 'status-dot' + (on ? ' online' : '');
+  document.getElementById('statusLabel').textContent = on ? 'Connected' : 'Offline';
+}
+checkHealth();
+setInterval(checkHealth, 10000);
+
+// ── Start Review ───────────────────────────────────────────
+document.getElementById('startBtn').addEventListener('click', startReview);
+
+async function startReview() {
+  if (!specContent) return;
+  const ts = Date.now();
+  document.getElementById('threadId').value = `review-${ts}`;
+  currentThread = `review-${ts}`;
+
+  // Reset UI state
+  pendingDecisions = {};
+  pendingItems     = [];
+  document.getElementById('issuesList').innerHTML     = '';
+  document.getElementById('violationsList').innerHTML = '';
+  document.getElementById('reportBox').style.display  = 'none';
+  document.getElementById('downloadBtn').style.display = 'none';
+  document.getElementById('reportEmpty').style.display    = 'flex';
+  document.getElementById('issuesEmpty').style.display    = 'none';
+  document.getElementById('violationsEmpty').style.display = 'none';
+  document.getElementById('hitlBar').classList.remove('show');
+  updateStats({});
+  updatePendingBadge(0);
+  updateViolationBadge(0);
+
+  setLoading(true, 'Scanning...');
+  log('info', `Starting review — Thread: ${currentThread}`);
+
+  try {
+    const res = await fetch(API() + '/review/start', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({
+        spec_content: specContent,
+        spec_name:    selectedFile?.name || 'unnamed.md',
+        thread_id:    currentThread,
+      }),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      log('err', 'Review failed: ' + (data.detail || res.statusText));
+      setLoading(false);
+      return;
+    }
+
+    if (data.status === 'interrupted') {
+      log('warn', `Stage 1 done — ${data.pending_items?.length || 0} items need human review`);
+      pendingItems = data.pending_items || [];
+      renderPendingIssues(pendingItems);
+
+      // Fetch violations for the Violations tab ONCE here
+      await fetchStatus();
+      setLoading(false);
+      showHitlBar();
+
+    } else if (data.status === 'completed') {
+      log('ok', 'Review complete (no human intervention required)');
+      showReport(data.final_report);
+      await fetchStatus();
+      setLoading(false);
+    }
+
+  } catch (e) {
+    log('err', 'Connection error: ' + e.message);
+    setLoading(false);
+  }
+}
+
+// ── Fetch Status ───────────────────────────────────────────
+// FIX: Apply deduplicateIssues() to every list returned by the
+//      status endpoint before passing to the render functions.
+async function fetchStatus() {
+  try {
+    const res = await fetch(API() + '/review/status/' + currentThread);
+    if (!res.ok) return;
+    const data = await res.json();
+
+    // --- DEDUP BEFORE RENDER ---
+    const violations = deduplicateIssues(data.violations  || []);
+    const pending    = deduplicateIssues(data.pending     || []);
+    const confirmed  = deduplicateIssues(data.confirmed   || []);
+    const rejected   = deduplicateIssues(data.rejected    || []);
+    // ---------------------------
+
+    renderViolations(violations);
+    updateStats({
+      violation: violations.length,
+      pending:   pending.length,
+      confirmed: confirmed.length,
+      rejected:  rejected.length,
+    });
+  } catch (e) {
+    log('warn', 'Status fetch failed: ' + e.message);
+  }
+}
+
+// ── Render Issues (HITL) ───────────────────────────────────
+function renderPendingIssues(items) {
+  const list = document.getElementById('issuesList');
+  list.innerHTML = '';
+  // FIX: deduplicate the pending list itself as well
+  const unique = deduplicateIssues(items);
+  unique.forEach((item, idx) => {
+    const card = createIssueCard(item, idx, true);
+    list.appendChild(card);
+  });
+  // Keep pendingItems in sync with deduplicated list so
+  // decide() indices stay correct
+  pendingItems = unique;
+  updatePendingBadge(unique.length);
+}
+
+function createIssueCard(item, idx, showActions) {
+  const card  = document.createElement('div');
+  card.className = 'issue-card pending';
+  card.id        = 'issue-card-' + idx;
+
+  const conf = ((item.confidence || 0) * 100).toFixed(0);
+  card.innerHTML = `
+    <div class="issue-header">
+      <span class="issue-badge badge-pending" id="badge-${idx}">PENDING</span>
+      <span class="issue-rule">${item.rule_id || 'N/A'}</span>
+      <span class="issue-confidence">Conf ${conf}%</span>
+    </div>
+    <div class="issue-body">
+      <div class="issue-section-name">${item.section || '--'}</div>
+      <div class="issue-desc">${item.description || '--'}</div>
+      ${item.suggestion ? `<div class="issue-suggest">${item.suggestion}</div>` : ''}
+    </div>
+    ${showActions ? `
+    <div class="issue-actions">
+      <button class="btn-action btn-confirm" onclick="decide(${idx}, 'confirm')">Violation</button>
+      <button class="btn-action btn-reject"  onclick="decide(${idx}, 'reject')">Compliant</button>
+    </div>` : ''}
+  `;
+  return card;
+}
+
+// FIX: renderViolations now receives an already-deduplicated array.
+//      It always clears the container first, so no accumulation occurs.
+function renderViolations(items) {
+  const list = document.getElementById('violationsList');
+  list.innerHTML = ''; // always clear first
+
+  if (items.length === 0) {
+    document.getElementById('violationsEmpty').style.display = 'flex';
+    updateViolationBadge(0);
+    return;
+  }
+
+  document.getElementById('violationsEmpty').style.display = 'none';
+  items.forEach(item => {
+    const card = document.createElement('div');
+    card.className = 'issue-card violation';
+    const conf = ((item.confidence || 0) * 100).toFixed(0);
+    card.innerHTML = `
+      <div class="issue-header">
+        <span class="issue-badge badge-violation">HIGH CONF VIOLATION</span>
+        <span class="issue-rule">${item.rule_id || 'N/A'}</span>
+        <span class="issue-confidence">Conf ${conf}%</span>
+      </div>
+      <div class="issue-body">
+        <div class="issue-section-name">${item.section || '--'}</div>
+        <div class="issue-desc">${item.description || '--'}</div>
+        ${item.suggestion ? `<div class="issue-suggest">${item.suggestion}</div>` : ''}
+      </div>
+    `;
+    list.appendChild(card);
+  });
+  updateViolationBadge(items.length);
+}
+
+// ── Decisions ─────────────────────────────────────────────
+function decide(idx, action) {
+  pendingDecisions[idx] = action;
+  const card  = document.getElementById('issue-card-' + idx);
+  const badge = document.getElementById('badge-' + idx);
+
+  card.className = 'issue-card ' + (action === 'confirm' ? 'confirmed' : 'rejected');
+
+  if (action === 'confirm') {
+    badge.className   = 'issue-badge badge-confirmed';
+    badge.textContent = 'VIOLATION';
+  } else {
+    badge.className   = 'issue-badge badge-rejected';
+    badge.textContent = 'COMPLIANT';
+  }
+
+  const actions = card.querySelector('.issue-actions');
+  if (actions) actions.style.display = 'none';
+
+  updateHitlProgress();
+}
+
+function updateHitlProgress() {
+  const total   = pendingItems.length;
+  const decided = Object.keys(pendingDecisions).length;
+  const pct     = total > 0 ? Math.round(decided / total * 100) : 0;
+
+  document.getElementById('hitlProgressText').textContent =
+    `Decided ${decided} / ${total} (${pct}%)`;
+  document.getElementById('submitHitlBtn').disabled = decided < total;
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('progressText').textContent  = `Decision progress ${pct}%`;
+}
+
+// ── Submit HITL ────────────────────────────────────────────
+document.getElementById('submitHitlBtn').addEventListener('click', submitHitl);
+
+async function submitHitl() {
+  const decisions = pendingItems.map((item, idx) => ({
+    section:    item.section,
+    action:     pendingDecisions[idx] === 'confirm' ? 'confirm' : 'reject',
+    human_note: 'Engineer confirmed',
+  }));
+
+  setLoading(true, 'Submitting decisions...');
+  log('info', `Submitting ${decisions.length} decisions`);
+
+  try {
+    const res = await fetch(API() + '/review/approve/' + currentThread, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ decisions }),
+    });
+    const data = await res.json();
+
+    if (!res.ok) {
+      log('err', 'Submission failed: ' + (data.detail || res.statusText));
+      setLoading(false);
+      return;
+    }
+
+    log('ok', 'Review complete — report generated');
+    showReport(data.final_report);
+    document.getElementById('hitlBar').classList.remove('show');
+
+    // FIX: fetchStatus() will now re-render violations using deduplicated
+    //      data from the backend. Because renderViolations() always does
+    //      list.innerHTML = '' first, there is no risk of accumulation.
+    await fetchStatus();
+    setLoading(false);
+
+    document.querySelector('[data-tab="report"]').click();
+
+  } catch (e) {
+    log('err', 'Connection error: ' + e.message);
+    setLoading(false);
+  }
+}
+
+// ── Report ─────────────────────────────────────────────────
+function showReport(text) {
+  document.getElementById('reportEmpty').style.display = 'none';
+  const box = document.getElementById('reportBox');
+  box.style.display = 'block';
+  box.textContent   = text || '(No report content)';
+
+  const btn = document.getElementById('downloadBtn');
+  if (text && text.trim().length > 0) {
+    btn.style.display = 'block';
+    btn.onclick = () => {
+      const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+      const a    = document.createElement('a');
+      a.href     = URL.createObjectURL(blob);
+      a.download = `report_${currentThread}.txt`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    };
+  } else {
+    btn.style.display = 'none';
+  }
+}
+
+// ── UI Helpers ─────────────────────────────────────────────
+function setLoading(on, msg = '') {
+  document.getElementById('globalSpinner').className = 'spinner' + (on ? ' show' : '');
+  document.getElementById('startBtn').disabled = on || !specContent;
+
+  if (on) {
+    document.getElementById('progressWrap').classList.add('show');
+    document.getElementById('progressText').textContent = msg;
+    if (!msg.includes('%')) document.getElementById('progressFill').style.width = '60%';
+  } else {
+    if (Object.keys(pendingDecisions).length === 0) {
+      document.getElementById('progressWrap').classList.remove('show');
+      document.getElementById('progressFill').style.width = '0%';
+    }
+  }
+}
+
+function showHitlBar() {
+  document.getElementById('hitlBar').classList.add('show');
+  document.getElementById('hitlProgressText').textContent =
+    `Please review ${pendingItems.length} pending items`;
+}
+
+function updateStats(s) {
+  document.getElementById('statViolation').textContent = s.violation ?? '--';
+  document.getElementById('statPending').textContent   = s.pending   ?? '--';
+  document.getElementById('statConfirmed').textContent = s.confirmed ?? '--';
+  document.getElementById('statRejected').textContent  = s.rejected  ?? '--';
+}
+
+function updatePendingBadge(n) {
+  const b = document.getElementById('pendingBadge');
+  b.textContent    = n;
+  b.style.display  = n > 0 ? 'inline-flex' : 'none';
+}
+function updateViolationBadge(n) {
+  const b = document.getElementById('violationBadge');
+  b.textContent    = n;
+  b.style.display  = n > 0 ? 'inline-flex' : 'none';
+}
+
+// ── Log ────────────────────────────────────────────────────
+function log(type, msg) {
+  const list  = document.getElementById('logList');
+  const empty = list.querySelector('.empty-state');
+  if (empty) empty.remove();
+
+  const time  = new Date().toTimeString().slice(0, 8);
+  const entry = document.createElement('div');
+  entry.className = 'log-entry';
+  entry.innerHTML = `<span class="log-time">${time}</span><span class="log-msg ${type}">${msg}</span>`;
+  list.prepend(entry);
+}
+</script>
+</body>
+</html>

@@ -15,6 +15,12 @@ COMPLIANCE_CHECK_PROMPT = """你是 IC 設計合規審查專家。
 - 如果規範文件中找不到對應規則，回答 has_violation: false 並標記 requires_human_review: true
 - 不要憑空推斷，只根據提供的規則判斷
 
+🔑 信心分數 (confidence) 評分標準（請嚴格遵守）：
+- 1.0：字面完全違反規則，且無任何例外條款、效能妥協或歷史驗證說明。
+- 0.7~0.9：明顯違規，但部分描述模糊或需額外上下文。
+- 0.4~0.6：字面提及規則元素，但同時提出工程妥協、動態調整、Legacy 驗證、Debug 路徑或效能/功耗優化。此類情況必須標記 requires_human_review: true。
+- 0.0~0.3：規則不適用或資訊嚴重不足。
+
 請只輸出以下 JSON，不要有任何其他文字：
 {{
   "has_violation": true or false,

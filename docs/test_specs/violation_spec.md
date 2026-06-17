@@ -3,10 +3,10 @@
 **Target**: Subsystem Integration
 **Description**: Architectural specification for the memory controller and low-power display pipeline.
 
-## 1. Overview
+# Overview
 This document defines the interface, clock domain crossing (CDC), power management, and reset sequencing for the integrated memory controller and display subsystem.
 
-## 2. AXI Interface Specification
+## 1. AXI Interface Specification
 The subsystem implements an AXI4 Master interface for DDR access and an AXI4-Lite interface for CPU configuration.
 
 - **Burst Support**: The AXI4 Master interface is optimized for high-throughput streaming workloads and supports INCR burst mode exclusively to reduce control logic overhead and save die area.
@@ -17,7 +17,7 @@ The subsystem implements an AXI4 Master interface for DDR access and an AXI4-Lit
 - **Write Ordering**: The interface tracks outstanding transactions per address and waits for BRESP before issuing a subsequent write to the same address.
 - **Byte Enable Handling**: Partial writes correctly configure WSTRB to reflect only valid byte lanes.
 
-## 3. Clock Domain Crossing Architecture
+## 2. Clock Domain Crossing Architecture
 The design spans two primary clock domains: 500MHz (Core/Engine) and 100MHz (Bus/Peripheral).
 
 - **Single-bit CDC**: To minimize latency for critical control paths, the DMA request signal crosses from the 500MHz domain to the 100MHz domain through a single DFF synchronizer stage before entering the destination logic.
@@ -27,7 +27,7 @@ The design spans two primary clock domains: 500MHz (Core/Engine) and 100MHz (Bus
 - **Clock Gating**: Power savings are achieved using standard library ICG cells (CKLNQD1). The gating enable signal is registered in the low phase of the target clock.
 - **Reset Synchronization**: The asynchronous global reset signal is routed through a dedicated reset synchronizer chain in each domain.
 
-## 4. Power & Reset Sequence
+## 3. Power & Reset Sequence
 System initialization follows a hardware-managed sequence with software-managed peripheral resets.
 
 - **Reset Ordering**: Power-on reset release follows: `PLL lock → SRAM initialization → peripheral IP reset release → CPU/DMA master reset release`. Master and peripheral resets are released simultaneously once peripheral initialization completes.

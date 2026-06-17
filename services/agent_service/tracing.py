@@ -27,7 +27,7 @@ langfuse = Langfuse(
 
 def get_llm():
     return ChatGoogleGenerativeAI(
-        model="gemini-2.5-flash",
+        model="gemini-2.5-flash-lite",
         google_api_key=os.getenv("GOOGLE_API_KEY"),
         temperature=0,
     )
@@ -164,3 +164,4 @@ def traced_run_review(spec_content: str, spec_name: str) -> dict:
     print(f"\n📊 總 latency：{latency} 秒")
 
     return result
+

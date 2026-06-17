@@ -3,10 +3,10 @@
 **Target**: Subsystem Integration
 **Description**: Architectural specification for the memory controller and low-power display pipeline.
 
-## 1. Overview
+# Overview
 This document defines the interface, clock domain crossing (CDC), power management, and reset sequencing for the integrated memory controller and display subsystem. All design choices strictly adhere to company internal design standards.
 
-## 2. AXI Interface Specification
+## 1. AXI Interface Specification
 The subsystem implements an AXI4 Master interface for DDR access and an AXI4-Lite interface for CPU configuration.
 
 - **Burst Support**: The AXI4 Master interface supports both INCR and WRAP burst modes as required by the AXI4 specification.
@@ -15,7 +15,7 @@ The subsystem implements an AXI4 Master interface for DDR access and an AXI4-Lit
 - **Write Ordering**: The interface tracks outstanding transactions per address and waits for BRESP before issuing a subsequent write to the same address, ensuring deterministic memory ordering.
 - **Byte Enable Handling**: Partial writes correctly configure WSTRB to reflect only valid byte lanes. Unused byte lanes are strictly de-asserted to prevent unintended memory corruption.
 
-## 3. Clock Domain Crossing Architecture
+## 2. Clock Domain Crossing Architecture
 The design spans two primary clock domains: 500MHz (Core/Engine) and 100MHz (Bus/Peripheral).
 
 - **Single-bit CDC**: All single-bit control signals (e.g., `valid`, `ready`, `req`) crossing from the 500MHz domain to the 100MHz domain pass through a 2-stage DFF synchronizer clocked exclusively by the 100MHz destination clock.
@@ -23,7 +23,7 @@ The design spans two primary clock domains: 500MHz (Core/Engine) and 100MHz (Bus
 - **Clock Gating**: Power savings are achieved using standard library ICG cells (CKLNQD1). The gating enable signal is registered in the low phase of the target clock to eliminate glitches.
 - **Reset Synchronization**: The asynchronous global reset signal is routed through a dedicated reset synchronizer chain in each domain. De-assertion is synchronized to the local clock to prevent recovery/remetime violations.
 
-## 4. Power & Reset Sequence
+## 3. Power & Reset Sequence
 System initialization follows a deterministic hardware-managed sequence.
 
 - **Reset Ordering**: Power-on reset release strictly follows: `PLL lock → SRAM/register file initialization → peripheral IP reset release → peripheral asserts ready → CPU/DMA master reset release`. Master IPs never begin execution before peripheral readiness is confirmed.
